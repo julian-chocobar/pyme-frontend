@@ -12,6 +12,9 @@ const api = axios.create({
     'Accept': 'application/json',
   },
   withCredentials: true,
+  // Add this to handle CORS credentials
+  xsrfCookieName: 'csrftoken',
+  xsrfHeaderName: 'X-CSRFToken',
 });
 
 // Request interceptor
