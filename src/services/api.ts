@@ -1,13 +1,9 @@
 import axios from 'axios';
 
-// Usar el proxy de Vite en desarrollo
-const API_BASE_URL = import.meta.env.DEV
-  ? '/api'  // Usar el proxy configurado en vite.config.ts
-  : import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Set the base URL based on the environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://pyme-backend-production.up.railway.app';
 
 console.log('API Base URL:', API_BASE_URL);
-axios.defaults.withCredentials = true;
-
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -18,15 +14,26 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add a request interceptor to handle CORS
+// Request interceptor
 api.interceptors.request.use(config => {
-  if (config.headers) {
-    config.headers['Access-Control-Allow-Origin'] = window.location.origin;
-    config.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-    config.headers['Access-Control-Allow-Headers'] = 'Origin, X-Requested-With, Content-Type, Accept, Authorization';
-  }
+  // Add any request headers here if needed
   return config;
 });
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response) {
+      console.error('API Error:', error.response.status, error.response.data);
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+    } else {
+      console.error('Request error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface AccessRequest {
   file?: File;
