@@ -7,8 +7,7 @@ export interface Empleado {
   Email: string;
   Rol: string;
   EstadoEmpleado: 'Activo' | 'Inactivo' | 'Suspendido';
-  AreaID: number;
-  DatosBiometricos: string; // JSON string
+  AreaID: number | string;
   FechaRegistro: string;
 }
 
@@ -23,7 +22,7 @@ export interface Turno {
 export interface AreaTrabajo {
   AreaID: string;  // Changed from number to string to match API response format (e.g., 'AREA001')
   Nombre: string;
-  NivelAcceso: number; // 1-4
+  NivelAcceso?: number; // 1-4
   Descripcion: string;
   Estado: 'Activo' | 'Inactivo';
 }

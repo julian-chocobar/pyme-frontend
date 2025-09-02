@@ -64,7 +64,7 @@ export const FacialRecognitionView: React.FC<FacialRecognitionViewProps> = ({
           <button
             onClick={startStreaming}
             disabled={isCameraLoading}
-            className="w-full max-w-xs mx-auto inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-lg font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-gray-500"
           >
             {isCameraLoading ? (
               <>

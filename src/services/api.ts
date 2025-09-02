@@ -130,18 +130,69 @@ export const createPinAccess = async (data: Omit<AccessRequest, 'file'>): Promis
   }
 };
 
-export const getEmpleados = async () => {
+// Employee management
+export interface Empleado {
+  EmpleadoID: number;
+  Nombre: string;
+  Apellido: string;
+  DNI: string;
+  FechaNacimiento: string;
+  Email: string;
+  Rol: string;
+  EstadoEmpleado: 'Activo' | 'Inactivo';
+  AreaID: string;
+  FechaRegistro: string;
+}
+
+export interface AreaTrabajo {
+  AreaID: string;
+  Nombre: string;
+  Descripcion: string;
+  Estado: 'Activo' | 'Inactivo';
+}
+
+export const getEmpleados = async (): Promise<Empleado[]> => {
   const response = await api.get('/empleados');
   return response.data;
 };
 
-export const getAreas = async () => {
+export const getAreas = async (): Promise<AreaTrabajo[]> => {
   const response = await api.get('/areas');
   return response.data;
 };
 
-export const getEmpleado = async (id: number) => {
+export const getEmpleado = async (id: number): Promise<Empleado> => {
   const response = await api.get(`/empleados/${id}`);
+  return response.data;
+};
+
+export const createEmpleado = async (empleadoData: Omit<Empleado, 'EmpleadoID' | 'FechaRegistro'>): Promise<{message: string, EmpleadoID: number}> => {
+  const response = await api.post('/empleados/crear', empleadoData);
+  return response.data;
+};
+
+export const deleteEmpleado = async (id: number): Promise<{message: string, empleado_eliminado: Empleado}> => {
+  const response = await api.delete(`/empleados/${id}`);
+  return response.data;
+};
+
+export const registrarRostro = async (empleadoId: number, file: File | FormData): Promise<{message: string}> => {
+  const formData = file instanceof FormData ? file : new FormData();
+  
+  if (!(file instanceof FormData)) {
+    formData.append('file', file);
+  }
+  
+  const response = await api.post(
+    `/empleados/${empleadoId}/registrar_rostro`,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  
   return response.data;
 };
 

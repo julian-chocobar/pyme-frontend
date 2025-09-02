@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Acceso } from '../types';
-import { Clock, User, MapPin, Shield } from 'lucide-react';
+import { User, MapPin, Shield } from 'lucide-react';
 
 interface AccessLogTableProps {
   accesos: Acceso[];
@@ -44,11 +44,7 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <Clock className="w-5 h-5" />
-        Registro de Accesos Recientes
-      </h3>
+    <div className="bg-white dark:bg-gray-900">
       
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -155,15 +151,17 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
               );
             })}
           </tbody>
+          {accesos.length === 0 && (
+            <tr>
+              <td colSpan={6} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <p>No hay accesos registrados.</p>
+                </div>
+              </td>
+            </tr>
+          )}
         </table>
-        
-        {accesos.length === 0 && (
-          <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No hay registros de acceso aún.</p>
-            <p className="text-sm">Realice un reconocimiento facial para generar logs.</p>
-          </div>
-        )}
+
       </div>
     </div>
   );
