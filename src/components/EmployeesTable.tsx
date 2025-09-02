@@ -15,8 +15,12 @@ export const EmployeesTable: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [isCameraLoading, setIsCameraLoading] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'camera' | 'upload'>('camera');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEmpleados();
@@ -83,6 +87,28 @@ export const EmployeesTable: React.FC = () => {
     setCapturedImage(null);
   }, []);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona un archivo de imagen válido');
+      return;
+    }
+
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleCapture = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return;
     
@@ -107,23 +133,39 @@ export const EmployeesTable: React.FC = () => {
     stopStreaming();
   }, [stopStreaming]);
 
-  const handleFaceRegistered = async () => {
-    if (!selectedEmpleado || !capturedImage) return;
+  const handleRegisterFace = async () => {
+    if ((!capturedImage && !selectedFile) || !selectedEmpleado) return;
     
     try {
       setIsProcessing(true);
-      // Convert base64 to blob
-      const response = await fetch(capturedImage);
-      const blob = await response.blob();
-      const file = new File([blob], 'face.jpg', { type: 'image/jpeg' });
+      const formData = new FormData();
       
-      await registrarRostro(selectedEmpleado.EmpleadoID, file);
+      if (activeTab === 'camera' && capturedImage) {
+        // Handle camera capture
+        const response = await fetch(capturedImage);
+        const blob = await response.blob();
+        const file = new File([blob], 'face.jpg', { type: 'image/jpeg' });
+        formData.append('file', file);
+      } else if (activeTab === 'upload' && selectedFile) {
+        // Handle file upload
+        formData.append('file', selectedFile);
+      } else {
+        throw new Error('No se ha seleccionado ninguna imagen');
+      }
+      
+      await registrarRostro(selectedEmpleado.EmpleadoID, formData);
+      
+      // Close the modal and reset states
       setShowFaceRecognition(false);
       setCapturedImage(null);
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      stopStreaming();
+      
       alert('Rostro registrado exitosamente');
     } catch (error) {
       console.error('Error registering face:', error);
-      alert('Error al registrar el rostro');
+      alert('Error al registrar el rostro. Por favor, intente nuevamente.');
     } finally {
       setIsProcessing(false);
     }
@@ -252,99 +294,193 @@ export const EmployeesTable: React.FC = () => {
             </div>
             
             <div className="space-y-4">
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center text-white">
-                {isCameraLoading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-10">
-                    <Loader2 className="w-12 h-12 text-white animate-spin" />
-                    <p className="text-white mt-4 text-lg">Iniciando cámara...</p>
-                  </div>
-                )}
-
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  className={`w-full h-full object-cover ${isStreaming && !capturedImage ? 'block' : 'hidden'}`}
-                  onCanPlay={() => setIsStreaming(true)}
-                />
-                
-                {capturedImage && (
-                  <img 
-                    src={capturedImage} 
-                    alt="Captured face" 
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                
-                {!isStreaming && !capturedImage && !isCameraLoading && (
-                  <div className="text-center p-4">
-                    <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                    <p>La cámara no está disponible o no se ha iniciado</p>
-                  </div>
-                )}
-                
-                <canvas ref={canvasRef} className="hidden" />
+              {/* Tabs */}
+              <div className="border-b border-gray-200 dark:border-gray-700">
+                <nav className="-mb-px flex space-x-8">
+                  <button
+                    onClick={() => setActiveTab('camera')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'camera' 
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'}`}
+                  >
+                    Cámara Web
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('upload')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'upload' 
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400' 
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'}`}
+                  >
+                    Subir Imagen
+                  </button>
+                </nav>
               </div>
-              
-              <div className="flex justify-center gap-4">
-                {!capturedImage ? (
-                  <>
-                    <button
-                      onClick={startStreaming}
-                      disabled={isStreaming || isCameraLoading}
-                      className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isCameraLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Camera className="w-4 h-4" />
-                      )}
-                      {isStreaming ? 'Cámara activa' : 'Iniciar cámara'}
-                    </button>
-                    
-                    <button
-                      onClick={handleCapture}
-                      disabled={!isStreaming || isCameraLoading}
-                      className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Camera className="w-4 h-4" />
-                      Capturar rostro
-                    </button>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center w-full space-y-4">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => {
-                          setCapturedImage(null);
-                          startStreaming();
-                        }}
-                        className="inline-flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600"
-                      >
-                        Volver a capturar
-                      </button>
-                      
-                      <button
-                        onClick={handleFaceRegistered}
-                        disabled={isProcessing}
-                        className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isProcessing ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <User className="w-4 h-4" />
+
+              {/* Camera Tab */}
+              {activeTab === 'camera' && (
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center text-white">
+                    {isCameraLoading ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-10">
+                        <Loader2 className="w-12 h-12 text-white animate-spin" />
+                        <p className="text-white mt-4 text-lg">Iniciando cámara...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          className={`w-full h-full object-cover ${isStreaming && !capturedImage ? 'block' : 'hidden'}`}
+                          onCanPlay={() => setIsStreaming(true)}
+                        />
+                        
+                        {capturedImage && (
+                          <img 
+                            src={capturedImage} 
+                            alt="Captured face" 
+                            className="w-full h-full object-cover"
+                          />
                         )}
-                        Confirmar registro
-                      </button>
-                    </div>
-                    
-                    {isProcessing && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Procesando imagen, por favor espere...
+                        
+                        {!isStreaming && !capturedImage && !isCameraLoading && (
+                          <div className="text-center p-4">
+                            <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                            <p>La cámara no está disponible o no se ha iniciado</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <canvas ref={canvasRef} className="hidden" />
+                  </div>
+                  
+                  <div className="flex justify-center gap-4">
+                    {!capturedImage ? (
+                      <>
+                        <button
+                          onClick={startStreaming}
+                          disabled={isStreaming || isCameraLoading}
+                          className="inline-flex items-center gap-2 bg-black dark:bg-white text-white dark:text-black px-4 py-2 rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isCameraLoading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Camera className="w-4 h-4" />
+                          )}
+                          {isStreaming ? 'Cámara Iniciada' : 'Iniciar Cámara'}
+                        </button>
+                        <button
+                          onClick={handleCapture}
+                          disabled={!isStreaming || isCameraLoading}
+                          className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Capturar Rostro
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setCapturedImage(null)}
+                          className="inline-flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600"
+                        >
+                          <X className="w-4 h-4" />
+                          Volver a Tomar
+                        </button>
+                        <button
+                          onClick={handleRegisterFace}
+                          disabled={isProcessing}
+                          className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Save className="w-4 h-4" />
+                          )}
+                          Registrar Rostro
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Tab */}
+              {activeTab === 'upload' && (
+                <div className="space-y-4">
+                  <div className="relative aspect-video bg-gray-100 dark:bg-gray-700 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex flex-col items-center justify-center p-6 text-center">
+                    {previewUrl ? (
+                      <div className="relative w-full h-full">
+                        <img 
+                          src={previewUrl} 
+                          alt="Preview" 
+                          className="w-full h-full object-contain"
+                        />
+                        <button
+                          onClick={handleRemoveFile}
+                          className="absolute top-2 right-2 p-1 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75"
+                          aria-label="Remove image"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <svg
+                          className="mx-auto h-12 w-12 text-gray-400"
+                          stroke="currentColor"
+                          fill="none"
+                          viewBox="0 0 48 48"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <div className="flex text-sm text-gray-600 dark:text-gray-400">
+                          <label
+                            htmlFor="file-upload"
+                            className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                          >
+                            <span>Sube un archivo</span>
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              className="sr-only"
+                              accept="image/*"
+                              onChange={handleFileChange}
+                              ref={fileInputRef}
+                            />
+                          </label>
+                          <p className="pl-1">o arrástralo aquí</p>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          PNG, JPG, GIF hasta 5MB
+                        </p>
                       </div>
                     )}
                   </div>
-                )}
+                  
+                  <div className="flex justify-center">
+                    <button
+                      onClick={handleRegisterFace}
+                      disabled={!previewUrl || isProcessing}
+                      className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Registrar Rostro
+                    </button>
+                  </div>
+                </div>
+              )}
               </div>
             </div>
           </div>
