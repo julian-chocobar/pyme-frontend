@@ -22,7 +22,6 @@ export interface Turno {
 export interface AreaTrabajo {
   AreaID: string;  // Changed from number to string to match API response format (e.g., 'AREA001')
   Nombre: string;
-  NivelAcceso?: number; // 1-4
   Descripcion: string;
   Estado: 'Activo' | 'Inactivo';
 }
@@ -39,8 +38,7 @@ export interface Acceso {
   AccesoID: number;
   EmpleadoID: number | null;
   AreaID: string;  // Changed from number to string to match API response format (e.g., 'AREA001')
-  FechaHoraIngreso: string;
-  FechaHoraEgreso: string | null;
+  FechaHora: string;
   TipoAcceso: 'Ingreso' | 'Egreso';
   MetodoAcceso: 'Facial' | 'PIN' | 'Manual';
   DispositivoAcceso: string;

@@ -28,7 +28,7 @@ export const PinAccessView: React.FC<PinAccessViewProps> = ({
           type="password"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
-          placeholder="Ingrese su PIN de 4 dígitos"
+          placeholder="••••"
           maxLength={4}
           className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-center text-2xl tracking-[1em] focus:outline-none focus:ring-2 focus:ring-blue-500"
         />

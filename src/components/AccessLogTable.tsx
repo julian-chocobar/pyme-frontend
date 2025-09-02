@@ -80,9 +80,9 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                 <tr key={acceso.AccesoID} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="py-3 px-4 text-gray-900 dark:text-white">
                     <div className="space-y-1">
-                      <div>{new Date(acceso.FechaHoraIngreso).toLocaleDateString('es-ES')}</div>
+                      <div>{new Date(acceso.FechaHora).toLocaleDateString('es-ES')}</div>
                       <div className="text-xs text-gray-500">
-                        {new Date(acceso.FechaHoraIngreso).toLocaleTimeString('es-ES')}
+                        {new Date(acceso.FechaHora).toLocaleTimeString('es-ES')}
                       </div>
                     </div>
                   </td>
@@ -105,9 +105,6 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                       <div>
                         <div className="text-gray-900 dark:text-white">
                           {area?.Nombre || 'Área Desconocida'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Nivel: {area?.NivelAcceso || 'N/A'}
                         </div>
                       </div>
                     </div>
