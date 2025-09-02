@@ -1,4 +1,4 @@
-# PyME Pastas Artesanales - Control de Acceso + Analytics
+# PyME Pastas - Control de Acceso + Analytics
 
 Una interfaz web prototipo para una PyME de pastas que integra control de acceso por reconocimiento facial con OpenCV y dashboards de producción.
 
