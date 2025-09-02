@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { User, Trash2, Camera, Loader2, X } from 'lucide-react';
+import { Trash2, Camera, Loader2, X, Save } from 'lucide-react';
 import { getEmpleados, deleteEmpleado, registrarRostro, Empleado as ApiEmpleado } from '../services/api';
 
 export const EmployeesTable: React.FC = () => {
@@ -481,7 +481,6 @@ export const EmployeesTable: React.FC = () => {
                   </div>
                 </div>
               )}
-              </div>
             </div>
           </div>
         </div>
