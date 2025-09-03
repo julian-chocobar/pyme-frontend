@@ -147,16 +147,16 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                 </tr>
               );
             })}
+            {accesos.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <p>No hay accesos registrados.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
-          {accesos.length === 0 && (
-            <tr>
-              <td colSpan={6} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
-                <div className="flex flex-col items-center justify-center space-y-2">
-                  <p>No hay accesos registrados.</p>
-                </div>
-              </td>
-            </tr>
-          )}
         </table>
 
       </div>

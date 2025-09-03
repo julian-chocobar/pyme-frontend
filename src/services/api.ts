@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Set the base URL based on the environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://pyme-backend-production.up.railway.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 console.log('API Base URL:', API_BASE_URL);
 
