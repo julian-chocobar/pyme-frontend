@@ -11,7 +11,7 @@ const api = axios.create({
     'Accept': 'application/json',
   },
   // Removed withCredentials and CSRF headers for better CORS compatibility
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout
 });
 
 // Request interceptor
