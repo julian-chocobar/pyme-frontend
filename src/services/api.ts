@@ -16,23 +16,58 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use(config => {
+  console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
+    baseURL: config.baseURL,
+    data: config.data,
+    headers: config.headers
+  });
+  
   // Only set Content-Type for non-GET requests and when not already set
   if (config.method !== 'get' && !config.headers['Content-Type']) {
     config.headers['Content-Type'] = 'application/json';
   }
   return config;
+}, error => {
+  console.error('[API] Request error in interceptor:', error);
+  return Promise.reject(error);
 });
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  response => response,
+  response => {
+    console.log(`[API] Response ${response.status} ${response.config.url}`, {
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
   error => {
     if (error.response) {
-      console.error('API Error:', error.response.status, error.response.data);
+      console.error('[API] Response Error:', {
+        url: error.config?.url,
+        status: error.response.status,
+        statusText: error.response.statusText,
+        headers: error.response.headers,
+        data: error.response.data,
+        config: {
+          method: error.config?.method,
+          data: error.config?.data,
+          timeout: error.config?.timeout
+        }
+      });
     } else if (error.request) {
-      console.error('No response received:', error.request);
+      console.error('[API] No response received:', {
+        message: error.message,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          timeout: error.config?.timeout,
+          baseURL: error.config?.baseURL
+        }
+      });
     } else {
-      console.error('Request error:', error.message);
+      console.error('[API] Request setup error:', error.message);
     }
     return Promise.reject(error);
   }
