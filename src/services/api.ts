@@ -1,26 +1,25 @@
 import axios from 'axios';
 
 // Set the base URL based on the environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  (import.meta.env.PROD ? '/api' : 'http://localhost:8000');
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 console.log('API Base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  withCredentials: true,
-  // Add this to handle CORS credentials
-  xsrfCookieName: 'csrftoken',
-  xsrfHeaderName: 'X-CSRFToken',
+  // Removed withCredentials and CSRF headers for better CORS compatibility
+  timeout: 10000, // 10 second timeout
 });
 
 // Request interceptor
 api.interceptors.request.use(config => {
-  // Add any request headers here if needed
+  // Only set Content-Type for non-GET requests and when not already set
+  if (config.method !== 'get' && !config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   return config;
 });
 
