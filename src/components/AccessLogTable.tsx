@@ -1,6 +1,6 @@
 import React from 'react';
 import { Acceso, getAreaName } from '../types';
-import { User, Shield } from 'lucide-react';
+import { User, Shield, MapPin } from 'lucide-react';
 
 interface AccessLogTableProps {
   accesos: Array<Acceso & {
@@ -73,11 +73,16 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="text-gray-900 dark:text-white">
-                      {getAreaName(acceso.AreaID)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      ID: {acceso.AreaID}
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <div className="text-gray-900 dark:text-white">
+                          {getAreaName(acceso.AreaID)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ID: {acceso.AreaID}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">
