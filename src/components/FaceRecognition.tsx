@@ -131,15 +131,15 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
             AccesoID: Date.now(),
             EmpleadoID: response.empleado.id,
             AreaID: selectedArea,
-            FechaHoraIngreso: now.toISOString(),
-            FechaHoraEgreso: null,
+            FechaHora: now.toISOString(),
             TipoAcceso: tipoAcceso,
             MetodoAcceso: 'Facial',
             AccesoPermitido: true,
-            MotivoDenegacion: null,
             DispositivoAcceso: 'CAM-PRINCIPAL-01',
             ConfianzaReconocimiento: response.confianza || 0.9,
-            ObservacionesSeguridad: response.confianza && response.confianza < 0.8 ? 'Confianza por debajo del umbral recomendado' : null
+            Nombre: response.empleado.nombre,
+            Apellido: response.empleado.apellido,
+            Rol: response.empleado.rol,
           };
           onAccessLog(acceso);
         }
@@ -184,15 +184,15 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           AccesoID: Date.now(),
           EmpleadoID: response.empleado.id,
           AreaID: selectedArea,
-          FechaHoraIngreso: now.toISOString(),
-          FechaHoraEgreso: null,
+          FechaHora: now.toISOString(),
           TipoAcceso: tipoAcceso,
           MetodoAcceso: 'PIN',
           AccesoPermitido: true,
-          MotivoDenegacion: null,
           DispositivoAcceso: 'TERMINAL-PIN-01',
           ConfianzaReconocimiento: null,
-          ObservacionesSeguridad: null
+          Nombre: response.empleado.nombre,
+          Apellido: response.empleado.apellido,
+          Rol: response.empleado.rol,
         };
         onAccessLog(acceso);
       }
@@ -277,7 +277,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
               <option value="">Seleccione un área</option>
               {areas.map((area) => (
                 <option key={area.AreaID} value={area.AreaID}>
-                  {area.Nombre} ({area.NivelAcceso})
+                  {area.Nombre} ({area.AreaID})
                 </option>
               ))}
             </select>

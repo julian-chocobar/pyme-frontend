@@ -1,51 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Acceso } from '../types';
-import { User, MapPin, Shield } from 'lucide-react';
+import React from 'react';
+import { Acceso, getAreaName } from '../types';
+import { User, Shield } from 'lucide-react';
 
 interface AccessLogTableProps {
-  accesos: Acceso[];
+  accesos: Array<Acceso & {
+    Nombre?: string | null;
+    Apellido?: string | null;
+    Rol?: string;
+    DNI?: string;
+  }>;
 }
 
-import { getEmpleado, getAreas } from '../services/api';
-import { Empleado, AreaTrabajo } from '../types';
-
 export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
-  const [empleados, setEmpleados] = useState<Empleado[]>([]);
-  const [areas, setAreas] = useState<AreaTrabajo[]>([]);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const areasData = await getAreas();
-        setAreas(areasData);
-
-        // Fetch all unique employees from accesos
-        const employeeIds = [...new Set(accesos.map(a => a.EmpleadoID))].filter(id => id != null) as number[];
-        const employeePromises = employeeIds.map(id => getEmpleado(id));
-        const employeesData = await Promise.all(employeePromises);
-        setEmpleados(employeesData.filter(e => e !== undefined) as Empleado[]);
-
-      } catch (error) {
-        console.error("Error fetching initial data for access log:", error);
-      }
-    };
-
-    if (accesos.length > 0) {
-      fetchInitialData();
-    }
-  }, [accesos]);
-
-  const getEmpleadoInfo = (empleadoId: number) => {
-    return empleados.find((emp: Empleado) => emp.EmpleadoID === empleadoId);
-  };
-
-  const getAreaInfo = (areaId: string) => {
-    return areas.find((area: AreaTrabajo) => area.AreaID === areaId.toString());
-  };
 
   return (
     <div className="bg-white dark:bg-gray-900">
-      
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -59,7 +28,6 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
                 Área
               </th>
-
               <th className="text-center py-3 px-4 font-medium text-gray-900 dark:text-white">
                 Tipo
               </th>
@@ -72,13 +40,16 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
             </tr>
           </thead>
           <tbody>
-            {accesos.slice(0, 15).map((acceso) => {
-              const empleado = acceso.EmpleadoID !== null ? getEmpleadoInfo(acceso.EmpleadoID) : undefined;
-              const area = getAreaInfo(acceso.AreaID);
-              
-              return (
+            {accesos.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
+                  No hay accesos registrados.
+                </td>
+              </tr>
+            ) : (
+              accesos.slice(0, 15).map((acceso) => (
                 <tr key={acceso.AccesoID} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="py-3 px-4 text-gray-900 dark:text-white">
+                  <td className="py-3 px-4">
                     <div className="space-y-1">
                       <div>{new Date(acceso.FechaHora).toLocaleDateString('es-ES')}</div>
                       <div className="text-xs text-gray-500">
@@ -91,22 +62,22 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                       <User className="w-4 h-4 text-gray-400" />
                       <div>
                         <div className="text-gray-900 dark:text-white font-medium">
-                          {acceso.EmpleadoID === null ? 'Empleado Desconocido' : (empleado ? `${empleado.Nombre} ${empleado.Apellido}` : 'Cargando...')}
+                          {acceso.EmpleadoID === null ? 'Empleado Desconocido' : (acceso.Nombre ? `${acceso.Nombre} ${acceso.Apellido || ''}`.trim() : 'Desconocido')}
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {empleado?.Rol ? empleado.Rol.replace('_', ' ') : ''}
-                        </div>
+                        {acceso.Rol && (
+                          <div className="text-xs text-gray-500">
+                            {acceso.Rol}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <div className="text-gray-900 dark:text-white">
-                          {area?.Nombre || 'Área Desconocida'}
-                        </div>
-                      </div>
+                    <div className="text-gray-900 dark:text-white">
+                      {getAreaName(acceso.AreaID)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ID: {acceso.AreaID}
                     </div>
                   </td>
                   <td className="py-3 px-4 text-center">
@@ -115,7 +86,6 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                         ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
                         : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                       }`}>
-                      <Shield className="w-3 h-3" />
                       {acceso.TipoAcceso}
                     </span>
                   </td>
@@ -145,20 +115,10 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                     )}
                   </td>
                 </tr>
-              );
-            })}
-            {accesos.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-4 text-center text-gray-500 dark:text-gray-400">
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <p>No hay accesos registrados.</p>
-                  </div>
-                </td>
-              </tr>
+              ))
             )}
           </tbody>
         </table>
-
       </div>
     </div>
   );

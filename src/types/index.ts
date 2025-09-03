@@ -37,16 +37,34 @@ export interface EmpleadoTurno {
 export interface Acceso {
   AccesoID: number;
   EmpleadoID: number | null;
-  AreaID: string;  // Changed from number to string to match API response format (e.g., 'AREA001')
+  AreaID: string;  
   FechaHora: string;
   TipoAcceso: 'Ingreso' | 'Egreso';
   MetodoAcceso: 'Facial' | 'PIN' | 'Manual';
   DispositivoAcceso: string;
   ConfianzaReconocimiento: number | null;
-  ObservacionesSeguridad: string | null;
   AccesoPermitido: boolean;
-  MotivoDenegacion: string | null;
+  Nombre: string | null;
+  Apellido: string | null;
+  DNI?: string;
+  Rol?: string;
+  Area?: string;
 }
+
+export const getAreaName = (areaId: string): string => {
+  const areaMap: { [key: string]: string } = {
+    'AREA001': 'Preparación',
+    'AREA002': 'Procesamiento',
+    'AREA003': 'Elaboración',
+    'AREA004': 'Envasado',
+    'AREA005': 'Etiquetado',
+    'AREA006': 'Control Calidad',
+    'AREA007': 'Administración',
+    'AREA008': 'Común',
+    'AREA009': 'Logística'
+  };
+  return areaMap[areaId] || areaId; // Return the ID if no mapping found
+};
 
 export interface DispositivoAcceso {
   DispositivoID: number;
