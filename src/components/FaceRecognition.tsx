@@ -87,6 +87,80 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
     }
   }, []);
 
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (!selectedArea) {
+      alert('Por favor seleccione un área');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const imageUrl = URL.createObjectURL(file);
+      setCapturedImage(imageUrl);
+      
+      // Process the image
+      await processImage(file);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      alert('Error al procesar la imagen');
+      setCapturedImage(null);
+      setIsProcessing(false);
+    }
+  }, [selectedArea, tipoAcceso, areas, onAccessLog]);
+
+  const processImage = async (file: File) => {
+    try {
+      const response = await createFacialAccess({
+        file,
+        tipo_acceso: tipoAcceso,
+        area_id: selectedArea,
+        dispositivo: 'Web Upload'
+      });
+      
+      if (response.empleado) {
+        const empleadoFull = await getEmpleado(response.empleado.id);
+        setResult({ ...response, empleadoFull });
+        onAccessLog({
+          AccesoID: 0, // Will be set by the backend
+          EmpleadoID: response.empleado.id,
+          Nombre: response.empleado.nombre,
+          Apellido: response.empleado.apellido,
+          AreaID: selectedArea,
+          FechaHora: new Date().toISOString(),
+          TipoAcceso: tipoAcceso,
+          MetodoAcceso: 'Facial',
+          DispositivoAcceso: 'Web Upload',
+          ConfianzaReconocimiento: response.confianza || 0,
+          AccesoPermitido: response.acceso_permitido,
+          DNI: '',
+          Rol: response.empleado.rol
+        });
+      } else {
+        setResult(response);
+        onAccessLog({
+          AccesoID: 0, // Will be set by the backend
+          EmpleadoID: 0,
+          Nombre: 'Desconocido',
+          Apellido: '',
+          AreaID: selectedArea,
+          FechaHora: new Date().toISOString(),
+          TipoAcceso: tipoAcceso,
+          MetodoAcceso: 'Facial',
+          DispositivoAcceso: 'Web Upload',
+          ConfianzaReconocimiento: 0, // Default to 0 for failed recognition
+          AccesoPermitido: false,
+          DNI: '',
+          Rol: ''
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al procesar la imagen');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleCapture = useCallback(async () => {
     if (!canvasRef.current || !videoRef.current || !selectedArea) {
       alert('Por favor seleccione un área');
@@ -136,7 +210,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
             MetodoAcceso: 'Facial',
             AccesoPermitido: true,
             DispositivoAcceso: 'CAM-PRINCIPAL-01',
-            ConfianzaReconocimiento: response.confianza || 0.9,
+            ConfianzaReconocimiento: typeof response.confianza === 'number' ? response.confianza : 0,
             Nombre: response.empleado.nombre,
             Apellido: response.empleado.apellido,
             Rol: response.empleado.rol,
@@ -169,7 +243,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
       const response = await createPinAccess({
         pin: pin,
         tipo_acceso: tipoAcceso,
-        area_id: selectedArea
+        area_id: selectedArea,
       });
       
       let empleadoFull: Empleado | undefined = undefined;
@@ -189,7 +263,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           MetodoAcceso: 'PIN',
           AccesoPermitido: true,
           DispositivoAcceso: 'TERMINAL-PIN-01',
-          ConfianzaReconocimiento: null,
+          ConfianzaReconocimiento: 1, // PIN access gets maximum confidence
           Nombre: response.empleado.nombre,
           Apellido: response.empleado.apellido,
           Rol: response.empleado.rol,
@@ -296,6 +370,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           stopStreaming={stopStreaming}
           handleCapture={handleCapture}
           capturedImage={capturedImage}
+          onFileSelect={handleFileSelect}
         />
       )}
 

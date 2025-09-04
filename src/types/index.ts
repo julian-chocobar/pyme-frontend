@@ -42,7 +42,7 @@ export interface Acceso {
   TipoAcceso: 'Ingreso' | 'Egreso';
   MetodoAcceso: 'Facial' | 'PIN' | 'Manual';
   DispositivoAcceso: string;
-  ConfianzaReconocimiento: number | null;
+  ConfianzaReconocimiento: number;
   AccesoPermitido: boolean;
   Nombre: string | null;
   Apellido: string | null;

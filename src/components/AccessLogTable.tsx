@@ -18,8 +18,8 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+            <tr className="border-b border-gray-200 dark:border-gray-700 ">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white ">
                 Fecha/Hora
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
@@ -50,10 +50,10 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
               accesos.slice(0, 15).map((acceso) => (
                 <tr key={acceso.AccesoID} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="py-3 px-4">
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-gray-900 dark:text-gray-100 ">
                       <div>{new Date(acceso.FechaHora).toLocaleDateString('es-ES')}</div>
                       <div className="text-xs text-gray-500">
-                        {new Date(acceso.FechaHora).toLocaleTimeString('es-ES')}
+                        {new Date(acceso.FechaHora).toLocaleTimeString('es-ES') }
                       </div>
                     </div>
                   </td>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Loader2, LogIn } from 'lucide-react';
+import { Camera, Loader2, LogIn, Upload } from 'lucide-react';
 
 interface FacialRecognitionViewProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -11,6 +11,7 @@ interface FacialRecognitionViewProps {
   stopStreaming: () => void;
   handleCapture: () => void;
   capturedImage: string | null;
+  onFileSelect: (file: File) => void;
 }
 
 export const FacialRecognitionView: React.FC<FacialRecognitionViewProps> = ({
@@ -22,7 +23,8 @@ export const FacialRecognitionView: React.FC<FacialRecognitionViewProps> = ({
   startStreaming,
   stopStreaming,
   handleCapture,
-  capturedImage
+  capturedImage,
+  onFileSelect
 }) => {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
@@ -61,23 +63,48 @@ export const FacialRecognitionView: React.FC<FacialRecognitionViewProps> = ({
 
       <div className="mt-6 text-center">
         {!isStreaming && !capturedImage && (
-          <button
-            onClick={startStreaming}
-            disabled={isCameraLoading}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-lg font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-gray-500"
-          >
-            {isCameraLoading ? (
-              <>
-                <Loader2 className="w-6 h-6 animate-spin" />
-                Iniciando...
-              </>
-            ) : (
-              <>
-                <Camera className="w-6 h-6" />
-                Activar Cámara
-              </>
-            )}
-          </button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center w-full">
+            <button
+              onClick={startStreaming}
+              disabled={isCameraLoading}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-lg font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              {isCameraLoading ? (
+                <>
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  Iniciando...
+                </>
+              ) : (
+                <>
+                  <Camera className="w-6 h-6" />
+                  Activar Cámara
+                </>
+              )}
+            </button>
+            <div className="relative w-full sm:w-auto">
+              <input
+                type="file"
+                id="file-upload"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    onFileSelect(file);
+                  }
+                  // Reset the input to allow selecting the same file again
+                  e.target.value = '';
+                }}
+              />
+              <label
+                htmlFor="file-upload"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black dark:bg-white text-white dark:text-black px-6 py-3 rounded-lg font-bold text-base hover:bg-gray-800 dark:hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                <Upload className="w-5 h-5" />
+                Cargar Imagen
+              </label>
+            </div>
+          </div>
         )}
 
         {isStreaming && !capturedImage && (
