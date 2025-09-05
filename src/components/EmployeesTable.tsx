@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Trash2, Camera, Loader2, X, Save } from 'lucide-react';
+import { Trash2, Camera, Loader2, X, Save, MapPin } from 'lucide-react';
 import { getEmpleados, deleteEmpleado, registrarRostro, Empleado as ApiEmpleado } from '../services/api';
+import { getAreaName } from '../types';
 
 export const EmployeesTable: React.FC = () => {
   const [empleados, setEmpleados] = useState<ApiEmpleado[]>([]);
@@ -195,10 +196,10 @@ export const EmployeesTable: React.FC = () => {
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
-                Nombre
+                Empleado
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
-                Email
+                Área
               </th>
               <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
                 Rol
@@ -214,18 +215,35 @@ export const EmployeesTable: React.FC = () => {
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
             {empleados.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   No hay empleados registrados.
                 </td>
               </tr>
             ) : (
               empleados.map((empleado) => (
                 <tr key={empleado.EmpleadoID} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {empleado.Nombre} {empleado.Apellido}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-gray-900 dark:text-white">
+                        {empleado.Nombre} {empleado.Apellido}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {empleado.Email}
+                      </div>
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {empleado.Email}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <div>
+                        <div className="text-gray-900 dark:text-white">
+                          {getAreaName(empleado.AreaID)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          ID: {empleado.AreaID}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
