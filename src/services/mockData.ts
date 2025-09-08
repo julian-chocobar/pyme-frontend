@@ -240,6 +240,32 @@ export const generateIrregularityByAreaProduct = (): IrregularityByAreaProduct[]
   return data;
 };
 
+export function sumIrregularidadesPorArea(rows: IrregularityByAreaProduct[]) {
+  const map = new Map<string, number>();
+
+  rows.forEach(r => {
+    map.set(r.Area, (map.get(r.Area) ?? 0) + r.CantidadIrregularidades);
+  });
+
+  return Array.from(map, ([Area, CantidadIrregularidades]) => ({
+    Area,
+    CantidadIrregularidades,
+  }));
+}
+
+export function sumIrregularidadesPorProducto(rows: IrregularityByAreaProduct[]) {
+  const map = new Map<string, number>();
+
+  rows.forEach(r => {
+    map.set(r.TipoProducto, (map.get(r.TipoProducto) ?? 0) + r.CantidadIrregularidades);
+  });
+
+  return Array.from(map, ([TipoProducto, CantidadIrregularidades]) => ({
+    TipoProducto,
+    CantidadIrregularidades,
+  }));
+}
+
 // 5. Porcentaje de Desperdicio por Producto
 export const generateWastePercentageByProduct = (): WastePercentageByProduct[] => {
   const lotes = generateMockLotes();

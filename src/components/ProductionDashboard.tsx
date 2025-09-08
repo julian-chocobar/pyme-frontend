@@ -3,11 +3,16 @@ import { TrendingUp, AlertTriangle, Package, RefreshCw, Factory } from 'lucide-r
 import { 
   generateProductionByTypeQuarter,
   generateIrregularityByAreaProduct,
-  generateWastePercentageByProduct
+  generateWastePercentageByProduct,
+  sumIrregularidadesPorArea,
+  sumIrregularidadesPorProducto
 } from '../services/mockData';
+import ProductionBarChart from "./Visualizaciones/ProduccionPorProducto";
+import IrregularidadesStacked from './Visualizaciones/IrregularidadesPorArea';
+import IrregularidadesPorProducto from './Visualizaciones/IrregularidadesPorProducto';
 
 export const ProductionDashboard: React.FC = () => {
-  const [selectedView, setSelectedView] = useState<'overview' | 'production' | 'quality'>('overview');
+  const [selectedView, setSelectedView] = useState<'overview' | 'production' | 'quality' | 'visualizaciones'>('overview');
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Generate dashboard data
@@ -17,8 +22,15 @@ export const ProductionDashboard: React.FC = () => {
     wastePercentageByProduct: generateWastePercentageByProduct()
   }), [refreshKey]);
 
+  const IrregPorArea = sumIrregularidadesPorArea(dashboardData.irregularityByAreaProduct);
+  const IrregPorProducto = sumIrregularidadesPorProducto(dashboardData.irregularityByAreaProduct);
+
+  console.log( 'productionBytypequarter', dashboardData.productionByTypeQuarter );
+  console.log( 'irregularityByAreaProduct', dashboardData.irregularityByAreaProduct );
+  console.log( 'wastePercentageByProduct', dashboardData.wastePercentageByProduct );
+
   const handleRefreshData = () => {
-    setRefreshKey(prev => prev + 1);
+    setRefreshKey(prev => prev + 1); 
   };
 
   // Calculate KPIs
@@ -31,6 +43,7 @@ export const ProductionDashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Dashboard Header */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Factory className="w-6 h-6" />
@@ -48,6 +61,7 @@ export const ProductionDashboard: React.FC = () => {
               <option value="overview">Vista General</option>
               <option value="production">Producción</option>
               <option value="quality">Calidad</option>
+              <option value="visualizaciones">Visualizaciones</option>
             </select>
             
             <button
@@ -122,6 +136,19 @@ export const ProductionDashboard: React.FC = () => {
       </div>
 
       {/* Dashboard Content */}
+
+      {selectedView === 'visualizaciones' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Visualizacion por producto*/}
+          <ProductionBarChart data={dashboardData.productionByTypeQuarter} />
+          <IrregularidadesStacked data={IrregPorArea} />;
+          <IrregularidadesPorProducto data={IrregPorProducto} />
+
+        </div>
+      )}
+
+
+
       {selectedView === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Production by Type and Quarter */}
