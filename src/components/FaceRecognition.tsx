@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { AxiosError } from 'axios';
 import { Camera, Key, RotateCcw } from 'lucide-react';
 import { FacialRecognitionView } from './FacialRecognitionView';
 import { PinAccessView } from './PinAccessView';
@@ -43,10 +44,23 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
   }, [selectedArea]);
 
   useEffect(() => {
+    const videoElement = videoRef.current;  
+    
     return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      if (videoElement?.srcObject) {
+        const stream = videoElement.srcObject as MediaStream;
+        try {
+          const tracks = stream.getTracks();
+          tracks.forEach(track => {
+            track.stop();
+            stream.removeTrack(track);
+          });
+          if (videoElement.srcObject) {
+            videoElement.srcObject = null;
+          }
+        } catch (error) {
+          console.error('Error cleaning up stream:', error);
+        }
       }
     };
   }, []);
@@ -81,11 +95,147 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
   const stopStreaming = useCallback(() => {
     if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+      try {
+        stream.getTracks().forEach(track => {
+          track.stop();
+          stream.removeTrack(track);
+        });
+      } catch (error) {
+        console.error('Error stopping tracks:', error);
+      }
       videoRef.current.srcObject = null;
       setIsStreaming(false);
     }
   }, []);
+
+  const processImage = useCallback(async (file: File) => {
+    try {
+      const response = await createFacialAccess({
+        file,
+        tipo_acceso: tipoAcceso,
+        area_id: selectedArea,
+        dispositivo: 'Web Upload'
+      });
+      
+      if (response.empleado) {
+        const empleadoFull = await getEmpleado(response.empleado.id);
+        setResult({ ...response, empleadoFull, acceso_permitido: response.acceso_permitido ?? true });
+        onAccessLog({
+          AccesoID: 0, // Will be set by the backend
+          EmpleadoID: response.empleado.id,
+          Nombre: response.empleado.nombre,
+          Apellido: response.empleado.apellido,
+          AreaID: selectedArea,
+          FechaHora: new Date().toISOString(),
+          TipoAcceso: tipoAcceso,
+          MetodoAcceso: 'Facial',
+          DispositivoAcceso: 'Web Upload',
+          ConfianzaReconocimiento: response.confianza || 0,
+          AccesoPermitido: response.acceso_permitido ?? true,
+          DNI: '',
+          Rol: response.empleado.rol
+        });
+      } else {
+        // When no employee is recognized, create a complete denied response
+        const deniedResponse: AccessResponse = {
+          ...response,
+          acceso_permitido: false,
+          message: response.message || 'No se pudo identificar al empleado',
+          area_id: selectedArea,
+          tipo_acceso: tipoAcceso,
+          empleado: undefined,
+          confianza: 0
+        };
+        
+        // Set the result with the correct type including empleadoFull
+        setResult({
+          ...deniedResponse,
+          empleadoFull: undefined
+        });
+        onAccessLog({
+          AccesoID: 0, // Will be set by the backend
+          EmpleadoID: 0,
+          Nombre: 'Desconocido',
+          Apellido: '',
+          AreaID: selectedArea,
+          FechaHora: new Date().toISOString(),
+          TipoAcceso: tipoAcceso,
+          MetodoAcceso: 'Facial',
+          DispositivoAcceso: 'Web Upload',
+          ConfianzaReconocimiento: 0,
+          AccesoPermitido: false,
+          DNI: '',
+          Rol: ''
+        });
+      }
+    } catch (error: unknown) {
+      console.error('Error:', error);
+      
+      // Handle 403 Forbidden errors (access denied)
+      const axiosError = error as {
+        response?: {
+          status: number;
+          data?: {
+            detail?: string;
+            empleado?: {
+              id: number;
+              nombre: string;
+              apellido: string;
+              rol?: string;
+            };
+          };
+        };
+      };
+      
+      if (axiosError.response?.status === 403) {
+        const errorMessage = axiosError.response.data?.detail || 'Acceso denegado';
+        const empleadoData = axiosError.response.data?.empleado;
+        
+        // Create a denied response with the error message
+        const deniedResponse: AccessResponse = {
+          acceso_permitido: false,
+          message: errorMessage,
+          area_id: selectedArea,
+          tipo_acceso: tipoAcceso,
+          empleado: empleadoData ? {
+            id: empleadoData.id,
+            nombre: empleadoData.nombre,
+            apellido: empleadoData.apellido,
+            rol: empleadoData.rol || ''
+          } : undefined,
+          confianza: 0
+        };
+        
+        setResult({
+          ...deniedResponse,
+          empleadoFull: empleadoData ? {
+            EmpleadoID: empleadoData.id,
+            Nombre: empleadoData.nombre,
+            Apellido: empleadoData.apellido,
+            DNI: '',
+            Rol: empleadoData.rol || '',
+            Email: '',
+            EstadoEmpleado: 'Activo',
+            AreaID: selectedArea,
+            FechaNacimiento: '',
+            FechaRegistro: new Date().toISOString()
+          } : undefined
+        });
+      } else {
+        // For other errors, show a generic error message
+        setResult({
+          acceso_permitido: false,
+          message: 'Error al procesar la imagen',
+          area_id: selectedArea,
+          tipo_acceso: tipoAcceso,
+          empleado: undefined,
+          confianza: 0
+        });
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [selectedArea, tipoAcceso, onAccessLog]);
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!selectedArea) {
@@ -102,64 +252,17 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
       await processImage(file);
     } catch (error) {
       console.error('Error processing image:', error);
-      alert('Error al procesar la imagen');
+      // Set a result with acceso_denied when there's an error
+      setResult({
+        acceso_permitido: false,
+        message: 'Error al procesar la imagen',
+        area_id: selectedArea,
+        tipo_acceso: tipoAcceso
+      });
       setCapturedImage(null);
       setIsProcessing(false);
     }
-  }, [selectedArea, tipoAcceso, areas, onAccessLog]);
-
-  const processImage = async (file: File) => {
-    try {
-      const response = await createFacialAccess({
-        file,
-        tipo_acceso: tipoAcceso,
-        area_id: selectedArea,
-        dispositivo: 'Web Upload'
-      });
-      
-      if (response.empleado) {
-        const empleadoFull = await getEmpleado(response.empleado.id);
-        setResult({ ...response, empleadoFull });
-        onAccessLog({
-          AccesoID: 0, // Will be set by the backend
-          EmpleadoID: response.empleado.id,
-          Nombre: response.empleado.nombre,
-          Apellido: response.empleado.apellido,
-          AreaID: selectedArea,
-          FechaHora: new Date().toISOString(),
-          TipoAcceso: tipoAcceso,
-          MetodoAcceso: 'Facial',
-          DispositivoAcceso: 'Web Upload',
-          ConfianzaReconocimiento: response.confianza || 0,
-          AccesoPermitido: response.acceso_permitido,
-          DNI: '',
-          Rol: response.empleado.rol
-        });
-      } else {
-        setResult(response);
-        onAccessLog({
-          AccesoID: 0, // Will be set by the backend
-          EmpleadoID: 0,
-          Nombre: 'Desconocido',
-          Apellido: '',
-          AreaID: selectedArea,
-          FechaHora: new Date().toISOString(),
-          TipoAcceso: tipoAcceso,
-          MetodoAcceso: 'Facial',
-          DispositivoAcceso: 'Web Upload',
-          ConfianzaReconocimiento: 0, // Default to 0 for failed recognition
-          AccesoPermitido: false,
-          DNI: '',
-          Rol: ''
-        });
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al procesar la imagen');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  }, [selectedArea, processImage, tipoAcceso]);
 
   const handleCapture = useCallback(async () => {
     if (!canvasRef.current || !videoRef.current || !selectedArea) {
@@ -217,8 +320,9 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           };
           onAccessLog(acceso);
         }
-      } catch (error: any) {
-        const errorMessage = error.response?.data?.detail || 'Error en el servicio de reconocimiento facial';
+      } catch (error: unknown) {
+        const axiosError = error as AxiosError<{ detail: string }>;
+        const errorMessage = axiosError.response?.data?.detail || 'Error en el servicio de reconocimiento facial';
         setResult({
           acceso_permitido: false,
           message: typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage,
@@ -232,7 +336,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
         setIsProcessing(false);
       }
     }, 'image/jpeg', 0.85);
-  }, [onAccessLog, selectedArea, tipoAcceso]);
+  }, [onAccessLog, selectedArea, tipoAcceso, stopStreaming]);
 
   const handlePinSubmit = async () => {
     if (!pin || pin.length !== 4 || !selectedArea) return;
@@ -270,8 +374,9 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
         };
         onAccessLog(acceso);
       }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Error en el servicio de acceso por PIN';
+    } catch (error: unknown) {
+        const axiosError = error as AxiosError<{ detail: string }>;
+      const errorMessage = axiosError.response?.data?.detail || 'Error en el servicio de acceso por PIN';
       setResult({
         acceso_permitido: false,
         message: typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage,
