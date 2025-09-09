@@ -5,11 +5,16 @@ import {
   generateIrregularityByAreaProduct,
   generateWastePercentageByProduct,
   sumIrregularidadesPorArea,
-  sumIrregularidadesPorProducto
+  sumIrregularidadesPorProducto,
+  generateMockLotes,
+  generateMockIrregularidades
 } from '../services/mockData';
+
 import ProductionBarChart from "./Visualizaciones/ProduccionPorProducto";
 import IrregularidadesStacked from './Visualizaciones/IrregularidadesPorArea';
 import IrregularidadesPorProducto from './Visualizaciones/IrregularidadesPorProducto';
+import Desperdicio from './Visualizaciones/Desperdicio';
+import ProductionLineChart from './Visualizaciones/ProduccionPorProducto';
 
 export const ProductionDashboard: React.FC = () => {
   const [selectedView, setSelectedView] = useState<'overview' | 'production' | 'quality' | 'visualizaciones'>('overview');
@@ -19,7 +24,9 @@ export const ProductionDashboard: React.FC = () => {
   const dashboardData = useMemo(() => ({
     productionByTypeQuarter: generateProductionByTypeQuarter(),
     irregularityByAreaProduct: generateIrregularityByAreaProduct(),
-    wastePercentageByProduct: generateWastePercentageByProduct()
+    wastePercentageByProduct: generateWastePercentageByProduct(),
+    mockLotes: generateMockLotes(),
+    irregularidades: generateMockIrregularidades(),
   }), [refreshKey]);
 
   const IrregPorArea = sumIrregularidadesPorArea(dashboardData.irregularityByAreaProduct);
@@ -28,6 +35,8 @@ export const ProductionDashboard: React.FC = () => {
   console.log( 'productionBytypequarter', dashboardData.productionByTypeQuarter );
   console.log( 'irregularityByAreaProduct', dashboardData.irregularityByAreaProduct );
   console.log( 'wastePercentageByProduct', dashboardData.wastePercentageByProduct );
+  console.log( 'mocklotes', dashboardData.mockLotes);
+  console.log( 'irregularidades', dashboardData.irregularidades);
 
   const handleRefreshData = () => {
     setRefreshKey(prev => prev + 1); 
@@ -139,10 +148,10 @@ export const ProductionDashboard: React.FC = () => {
 
       {selectedView === 'visualizaciones' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Visualizacion por producto*/}
-          <ProductionBarChart data={dashboardData.productionByTypeQuarter} />
-          <IrregularidadesStacked data={IrregPorArea} />;
+          <ProductionLineChart rows={dashboardData.productionByTypeQuarter} />
           <IrregularidadesPorProducto data={IrregPorProducto} />
+          <IrregularidadesStacked data={IrregPorArea} />
+          <Desperdicio data={dashboardData.wastePercentageByProduct} />
 
         </div>
       )}
