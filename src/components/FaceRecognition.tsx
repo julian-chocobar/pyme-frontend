@@ -4,8 +4,7 @@ import { FacialRecognitionView } from './FacialRecognitionView';
 import { PinAccessView } from './PinAccessView';
 import { ResultDisplay } from './ResultDisplay';
 import { createFacialAccess, createPinAccess, getAreas, getEmpleado } from '../services/api';
-import { Acceso, AreaTrabajo, Empleado } from '../types';
-import { AccessResponse } from '../services/api';
+import { Acceso, AreaTrabajo, Empleado, TipoAcceso } from '../types';
 
 interface FaceRecognitionProps {
   onAccessLog: (acceso: Acceso) => void;
@@ -22,8 +21,25 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
   const [accessMethod, setAccessMethod] = useState<AccessMethod>('facial');
   const [pin, setPin] = useState('');
   const [selectedArea, setSelectedArea] = useState<string>('');
-  const [tipoAcceso, setTipoAcceso] = useState<'Ingreso' | 'Egreso'>('Ingreso');
-  const [result, setResult] = useState<(AccessResponse & { empleadoFull?: Empleado }) | null>(null);
+  const [tipoAcceso, setTipoAcceso] = useState<TipoAcceso>('Ingreso');
+  interface AccessResponse {
+    empleado?: {
+      id: number;
+      nombre: string;
+      apellido: string;
+      rol: string;
+      DNI?: string;
+      Email?: string;
+    };
+    confianza?: number;
+    acceso_permitido: boolean;
+    mensaje: string;
+    area_id?: string;
+    tipo_acceso?: TipoAcceso | string; // Allow string for API compatibility
+    empleadoFull?: Empleado; // Add empleadoFull to the interface
+  }
+
+  const [result, setResult] = useState<AccessResponse | null>(null);
   const [areas, setAreas] = useState<AreaTrabajo[]>([]);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
@@ -106,20 +122,57 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
       setCapturedImage(null);
       setIsProcessing(false);
     }
-  }, [selectedArea, tipoAcceso, areas, onAccessLog]);
+  }, [selectedArea, tipoAcceso, onAccessLog]);
 
   const processImage = async (file: File) => {
     try {
-      const response = await createFacialAccess({
-        file,
-        tipo_acceso: tipoAcceso,
-        area_id: selectedArea,
-        dispositivo: 'Web Upload'
-      });
+      let response;
+      try {
+        response = await createFacialAccess({
+          file,
+          tipo_acceso: tipoAcceso,
+          area_id: selectedArea,
+          dispositivo: 'Web Upload',
+          observaciones: ''
+        });
+      } catch (error: any) {
+        // Handle API errors (like 400, 500, etc.)
+        const errorDetail = error.response?.data?.detail;
+        setResult({
+          acceso_permitido: false,
+          mensaje: typeof errorDetail === 'string' ? errorDetail : 'Error en el servicio de reconocimiento facial',
+          area_id: selectedArea,
+          tipo_acceso: tipoAcceso,
+        });
+        return;
+      }
       
       if (response.empleado) {
-        const empleadoFull = await getEmpleado(response.empleado.id);
-        setResult({ ...response, empleadoFull });
+        let empleadoFull: Empleado;
+        try {
+          empleadoFull = await getEmpleado(response.empleado.id);
+        } catch (error) {
+          // If we can't get full employee details, use what we have
+          console.error('Error fetching employee details:', error);
+          empleadoFull = {
+            EmpleadoID: response.empleado.id,
+            Nombre: response.empleado.nombre,
+            Apellido: response.empleado.apellido,
+            DNI: response.empleado.DNI || '',
+            Rol: response.empleado.rol,
+            Email: response.empleado.Email || '',
+            FechaNacimiento: '',
+            FechaRegistro: new Date().toISOString().split('T')[0],
+            Estado: 'activo',
+            AreaID: selectedArea
+          };
+        }
+        
+        setResult({ 
+          ...response, 
+          empleadoFull,
+          tipo_acceso: response.tipo_acceso as TipoAcceso
+        });
         onAccessLog({
           AccesoID: 0, // Will be set by the backend
           EmpleadoID: response.empleado.id,
@@ -133,10 +186,14 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           ConfianzaReconocimiento: response.confianza || 0,
           AccesoPermitido: response.acceso_permitido,
           DNI: '',
-          Rol: response.empleado.rol
+          Rol: response.empleado.rol,
+          NombreArea: areas.find(a => a.AreaID === selectedArea)?.Nombre || ''
         });
       } else {
-        setResult(response);
+        setResult({
+          ...response,
+          tipo_acceso: response.tipo_acceso as TipoAcceso
+        });
         onAccessLog({
           AccesoID: 0, // Will be set by the backend
           EmpleadoID: 0,
@@ -150,7 +207,8 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           ConfianzaReconocimiento: 0, // Default to 0 for failed recognition
           AccesoPermitido: false,
           DNI: '',
-          Rol: ''
+          Rol: '',
+          NombreArea: areas.find(a => a.AreaID === selectedArea)?.Nombre || ''
         });
       }
     } catch (error) {
@@ -191,13 +249,56 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           file,
           tipo_acceso: tipoAcceso,
           area_id: selectedArea,
+          dispositivo: 'Web Camera',
+          observaciones: ''
         });
 
         let empleadoFull: Empleado | undefined = undefined;
         if (response.empleado) {
-          empleadoFull = await getEmpleado(response.empleado.id);
+          try {
+            empleadoFull = await getEmpleado(response.empleado.id);
+          } catch (error) {
+            console.error('Error fetching employee details:', error);
+          }
         }
         setResult({ ...response, empleadoFull });
+        
+        // Log the access
+        if (response.empleado) {
+          onAccessLog({
+            AccesoID: 0,
+            EmpleadoID: response.empleado.id,
+            Nombre: response.empleado.nombre,
+            Apellido: response.empleado.apellido,
+            AreaID: selectedArea,
+            FechaHora: new Date().toISOString(),
+            TipoAcceso: tipoAcceso,
+            MetodoAcceso: 'Facial',
+            DispositivoAcceso: 'Web Camera',
+            ConfianzaReconocimiento: response.confianza || 0,
+            AccesoPermitido: response.acceso_permitido,
+            DNI: '',
+            Rol: response.empleado.rol,
+            NombreArea: areas.find(a => a.AreaID === selectedArea)?.Nombre || ''
+          });
+        } else {
+          onAccessLog({
+            AccesoID: 0,
+            EmpleadoID: 0,
+            Nombre: 'Desconocido',
+            Apellido: '',
+            AreaID: selectedArea,
+            FechaHora: new Date().toISOString(),
+            TipoAcceso: tipoAcceso,
+            MetodoAcceso: 'Facial',
+            DispositivoAcceso: 'Web Camera',
+            ConfianzaReconocimiento: 0,
+            AccesoPermitido: false,
+            DNI: '',
+            Rol: '',
+            NombreArea: areas.find(a => a.AreaID === selectedArea)?.Nombre || ''
+          });
+        }
 
         if (response.acceso_permitido && response.empleado) {
           const now = new Date();
@@ -218,15 +319,10 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
           onAccessLog(acceso);
         }
       } catch (error: any) {
-        const errorMessage = error.response?.data?.detail || 'Error en el servicio de reconocimiento facial';
+        const errorDetail = error.response?.data?.detail;
         setResult({
-          acceso_permitido: false,
-          message: typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage,
-          area_id: selectedArea || '',
-          tipo_acceso: tipoAcceso,
-          empleado: undefined,
-          confianza: 0,
-          metodo_acceso: 'Facial'
+          mensaje: errorDetail || 'Error al procesar la imagen',
+          acceso_permitido: false
         });
       } finally {
         setIsProcessing(false);
@@ -271,14 +367,13 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
         onAccessLog(acceso);
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || 'Error en el servicio de acceso por PIN';
+      const errorDetail = error.response?.data?.detail;
       setResult({
         acceso_permitido: false,
-        message: typeof errorMessage === 'object' ? JSON.stringify(errorMessage) : errorMessage,
+        mensaje: typeof errorDetail === 'string' ? errorDetail : 'Error en el servicio de acceso por PIN',
         area_id: selectedArea || '',
         tipo_acceso: tipoAcceso,
         empleado: undefined,
-        metodo_acceso: 'PIN'
       });
     } finally {
       setIsProcessing(false);

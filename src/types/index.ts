@@ -1,3 +1,24 @@
+// Base types
+export type EstadoType = 'activo' | 'inactivo' | 'suspendido';
+export type TipoAcceso = 'Ingreso' | 'Egreso';
+export type MetodoAcceso = 'Facial' | 'PIN' | 'Manual' | string;
+
+// Pagination
+export interface PaginationMetadata {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_previous: boolean;
+  has_next: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMetadata;
+}
+
+// Employee types
 export interface Empleado {
   EmpleadoID: number;
   Nombre: string;
@@ -6,8 +27,8 @@ export interface Empleado {
   FechaNacimiento: string;
   Email: string;
   Rol: string;
-  EstadoEmpleado: 'Activo' | 'Inactivo' | 'Suspendido';
-  AreaID: number | string;
+  Estado: EstadoType;
+  AreaID: string;
   FechaRegistro: string;
 }
 
@@ -16,14 +37,14 @@ export interface Turno {
   Nombre: 'Mañana' | 'Tarde' | 'Noche';
   HoraInicio: string;
   HoraFin: string;
-  EstadoTurno: 'Activo' | 'Inactivo';
+  EstadoTurno: EstadoType;
 }
 
 export interface AreaTrabajo {
-  AreaID: string;  // Changed from number to string to match API response format (e.g., 'AREA001')
+  AreaID: string;
   Nombre: string;
   Descripcion: string;
-  Estado: 'Activo' | 'Inactivo';
+  Estado: EstadoType;
 }
 
 export interface EmpleadoTurno {
@@ -34,18 +55,61 @@ export interface EmpleadoTurno {
   FechaFinAsignacion?: string;
 }
 
+// Access types
+export interface AccessRequest {
+  file?: File;
+  tipo_acceso: TipoAcceso;
+  area_id: string;
+  pin?: string;
+  dispositivo?: string;
+  observaciones?: string;
+}
+
+export interface AccessResponse {
+  empleado?: {
+    id: number;
+    nombre: string;
+    apellido: string;
+    rol: string;
+    DNI?: string;
+    Email?: string;
+  };
+  confianza?: number;
+  acceso_permitido: boolean;
+  mensaje: string;
+  area_id?: string;
+  tipo_acceso?: string;
+}
+
+export interface PaginationMetadata {
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_previous: boolean;
+  has_next: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMetadata;
+}
+
 export interface Acceso {
   AccesoID: number;
   EmpleadoID: number | null;
-  AreaID: string;  
+  AreaID: string;
+  NombreArea?: string;
   FechaHora: string;
-  TipoAcceso: 'Ingreso' | 'Egreso';
-  MetodoAcceso: 'Facial' | 'PIN' | 'Manual';
+  FechaHoraFormateada?: string;
+  TipoAcceso: TipoAcceso | string;
+  MetodoAcceso: MetodoAcceso;
   DispositivoAcceso: string;
-  ConfianzaReconocimiento: number;
-  AccesoPermitido: boolean;
-  Nombre: string | null;
-  Apellido: string | null;
+  ConfianzaReconocimiento?: number;
+  AccesoPermitido: boolean | string;
+  NombreEmpleado?: string;
+  Nombre?: string | null;
+  Apellido?: string | null;
   DNI?: string;
   Rol?: string;
   Area?: string;

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Acceso, getAreaName } from '../types';
-import { User, Shield, MapPin } from 'lucide-react';
+import { Acceso, getAreaName, PaginationMetadata } from '../types';
+import { User, Shield, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface AccessLogTableProps {
   accesos: Array<Acceso & {
@@ -9,9 +9,17 @@ interface AccessLogTableProps {
     Rol?: string;
     DNI?: string;
   }>;
+  pagination: PaginationMetadata;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
-export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
+export const AccessLogTable: React.FC<AccessLogTableProps> = ({ 
+  accesos, 
+  pagination, 
+  onPageChange, 
+  onPageSizeChange 
+}) => {
 
   return (
     <div className="bg-white dark:bg-gray-900">
@@ -62,7 +70,7 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                       <User className="w-4 h-4 text-gray-400" />
                       <div>
                         <div className="text-gray-900 dark:text-white font-medium">
-                          {acceso.EmpleadoID === null ? 'Empleado Desconocido' : (acceso.Nombre ? `${acceso.Nombre} ${acceso.Apellido || ''}`.trim() : 'Desconocido')}
+                          {acceso.EmpleadoID === null ? 'Empleado Desconocido' : (acceso.NombreEmpleado ? `${acceso.NombreEmpleado}`.trim() : 'Desconocido')}
                         </div>
                         {acceso.Rol && (
                           <div className="text-xs text-gray-500">
@@ -105,7 +113,7 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-center">
-                    {acceso.ConfianzaReconocimiento !== null ? (
+                    {acceso.ConfianzaReconocimiento !== undefined && acceso.ConfianzaReconocimiento !== null ? (
                       <div className={`font-medium ${
                         acceso.ConfianzaReconocimiento >= 0.8 
                           ? 'text-green-600 dark:text-green-400'
@@ -124,6 +132,72 @@ export const AccessLogTable: React.FC<AccessLogTableProps> = ({ accesos }) => {
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-b-lg border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Mostrando {accesos.length} de {pagination.total} registros
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <span>Filas por página:</span>
+              <select
+                value={pagination.page_size}
+                onChange={onPageSizeChange}
+                className="border rounded px-2 py-1 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-600 dark:text-gray-300 mr-2">
+                Página {pagination.page} de {pagination.total_pages}
+              </span>
+              <button
+                onClick={() => onPageChange(1)}
+                disabled={!pagination.has_previous}
+                className={`p-1.5 rounded-md ${!pagination.has_previous 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onPageChange(pagination.page - 1)}
+                disabled={!pagination.has_previous}
+                className={`p-1.5 rounded-md ${!pagination.has_previous 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onPageChange(pagination.page + 1)}
+                disabled={!pagination.has_next}
+                className={`p-1.5 rounded-md ${!pagination.has_next 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onPageChange(pagination.total_pages)}
+                disabled={!pagination.has_next}
+                className={`p-1.5 rounded-md ${!pagination.has_next 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,23 @@
 import { AreaTrabajo, Empleado } from '../types';
-import { AccessResponse } from '../services/api';
-import { CheckCircle, XCircle, User, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, User, Shield, Building } from 'lucide-react';
 
 interface ResultDisplayProps {
-  result: (AccessResponse & { empleadoFull?: Empleado }) | null;
+  result: {
+    empleado?: {
+      id: number;
+      nombre: string;
+      apellido: string;
+      rol: string;
+      DNI?: string;
+    };
+    confianza?: number;
+    acceso_permitido: boolean;
+    mensaje: string;
+    empleadoFull?: Empleado;
+    area_id?: string;
+    tipo_acceso?: string;
+    message?: string; // For backward compatibility
+  } | null;
   areas: AreaTrabajo[];
 }
 
@@ -33,7 +47,7 @@ export const ResultDisplay = ({ result, areas }: ResultDisplayProps) => {
         <p className={`text-sm ${
           result.acceso_permitido ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
           }`}>
-          {result.message}
+          {result.mensaje}
         </p>
 
         <div className="space-y-3 mt-4">
@@ -66,11 +80,14 @@ export const ResultDisplay = ({ result, areas }: ResultDisplayProps) => {
               )
             )}
 
-            <div className="flex items-center gap-2">
-              <span className="text-gray-700 dark:text-gray-300">
-                <strong>Área:</strong> {areas.find(a => a.AreaID === result.area_id?.toString())?.Nombre || 'Desconocida'}
-              </span>
-            </div>
+            {result.area_id && areas.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Building className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                <span className="text-gray-700 dark:text-gray-300">
+                  {areas.find(a => a.AreaID === result.area_id)?.Nombre || 'Área desconocida'}
+                </span>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-gray-700 dark:text-gray-300">
                 <strong>Acceso:</strong> {result.tipo_acceso}
@@ -87,10 +104,10 @@ export const ResultDisplay = ({ result, areas }: ResultDisplayProps) => {
           </div>
         </div>
 
-        {!result.acceso_permitido && result.message && !result.empleadoFull && (
+        {!result.acceso_permitido && (
           <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
             <p className="text-sm text-red-600 dark:text-red-400">
-              {result.message}
+              {result.mensaje || result.message || 'Error desconocido'}
             </p>
           </div>
         )}

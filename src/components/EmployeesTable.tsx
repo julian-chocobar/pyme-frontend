@@ -1,16 +1,32 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Trash2, Camera, Loader2, X, Save, MapPin } from 'lucide-react';
-import { getEmpleados, deleteEmpleado, registrarRostro, Empleado as ApiEmpleado } from '../services/api';
+import { Trash2, Camera, Loader2, X, Save, MapPin, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, UserPlus } from 'lucide-react';
+import { getEmpleados, deleteEmpleado, registrarRostro, Empleado as ApiEmpleado, PaginatedResponse } from '../services/api';
 import { getAreaName } from '../types';
 
-export const EmployeesTable: React.FC = () => {
-  const [empleados, setEmpleados] = useState<ApiEmpleado[]>([]);
+interface EmployeesTableProps {
+  onAddEmployee?: () => void;
+}
+
+export const EmployeesTable: React.FC<EmployeesTableProps> = ({ onAddEmployee }) => {
+  const [empleadosData, setEmpleadosData] = useState<PaginatedResponse<ApiEmpleado>>({
+    items: [],
+    pagination: {
+      total: 0,
+      page: 1,
+      page_size: 10,
+      total_pages: 1,
+      has_previous: false,
+      has_next: false
+    }
+  });
   const [loading, setLoading] = useState<boolean>(true);
-  const [showFaceRecognition, setShowFaceRecognition] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEmpleado, setSelectedEmpleado] = useState<ApiEmpleado | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  const { items: empleados, pagination } = empleadosData;
   
   // Refs for the video and canvas elements
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,21 +40,54 @@ export const EmployeesTable: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchEmpleados();
-  }, []);
+    fetchEmpleados(pagination.page, pagination.page_size, searchTerm);
+  }, [pagination.page, pagination.page_size]);
 
-  const fetchEmpleados = async () => {
+  const fetchEmpleados = async (page: number, pageSize: number, search: string = '') => {
     try {
       setLoading(true);
-      const data = await getEmpleados();
-      // The API response should already match our ApiEmpleado type
-      setEmpleados(Array.isArray(data) ? data : []);
+      const data = await getEmpleados(page, pageSize, search);
+      setEmpleadosData(data);
     } catch (error) {
       console.error('Error fetching employees:', error);
-      setEmpleados([]);
+      setEmpleadosData({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          page_size: pageSize,
+          total_pages: 1,
+          has_previous: false,
+          has_next: false
+        }
+      });
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handlePageChange = (newPage: number) => {
+    setEmpleadosData(prev => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        page: newPage
+      }
+    }));
+  };
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Reset to first page when searching
+    setEmpleadosData(prev => ({
+      ...prev,
+      pagination: {
+        ...prev.pagination,
+        page: 1
+      }
+    }));
+    // Trigger the API call with the current search term
+    fetchEmpleados(1, pagination.page_size, searchTerm);
   };
 
   const handleDelete = async (id: number) => {
@@ -47,7 +96,8 @@ export const EmployeesTable: React.FC = () => {
     try {
       setIsDeleting(id);
       await deleteEmpleado(id);
-      setEmpleados(empleados.filter(emp => emp.EmpleadoID !== id));
+      // Refresh the current page after deletion
+      fetchEmpleados(pagination.page, pagination.page_size, searchTerm);
     } catch (error) {
       console.error('Error deleting employee:', error);
       alert('Error al eliminar el empleado');
@@ -157,7 +207,6 @@ export const EmployeesTable: React.FC = () => {
       await registrarRostro(selectedEmpleado.EmpleadoID, formData);
       
       // Close the modal and reset states
-      setShowFaceRecognition(false);
       setCapturedImage(null);
       setSelectedFile(null);
       setPreviewUrl(null);
@@ -174,9 +223,10 @@ export const EmployeesTable: React.FC = () => {
 
   // Clean up video stream on unmount
   useEffect(() => {
+    const currentStream = streamRef.current;
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
@@ -184,134 +234,241 @@ export const EmployeesTable: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+        <Loader2 className="animate-spin h-8 w-8 text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900">
+    <div className="bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
+    <div className="px-6 py-4 flex items-center justify-between">
+      <div className="relative flex-1 max-w-md">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg className="h-5 w-5 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <form onSubmit={handleSearch} className="w-full">
+          <input
+            type="text"
+            placeholder="Buscar empleados..."
+            className="pl-10 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:placeholder-gray-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch(e)}
+          />
+        </form>
+      </div>
+      {onAddEmployee && (
+        <button
+          onClick={onAddEmployee}
+          className="inline-flex items-center gap-1.5 bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Crear Empleado
+        </button>
+      )}
+    </div>
+
+    {empleados.length === 0 ? (
+      <div className="bg-white dark:bg-gray-900">
+        <div className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+          No hay empleados registrados.
+        </div>
+      </div>
+    ) : (
       <div className="overflow-x-auto">
+
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700">
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900">
                 Empleado
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900">
                 Área
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900">
                 Rol
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900">
                 Estado
               </th>
-              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900">
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-            {empleados.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                  No hay empleados registrados.
+          <tbody className="bg-white dark:bg-gray-900">
+            {empleados.map((empleado) => (
+              <tr key={empleado.EmpleadoID} className="hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div>
+                    <div className="text-gray-900 dark:text-white">
+                      {empleado.Nombre} {empleado.Apellido}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {empleado.Email}
+                    </div>
+                  </div>
                 </td>
-              </tr>
-            ) : (
-              empleados.map((empleado) => (
-                <tr key={empleado.EmpleadoID} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
                     <div>
                       <div className="text-gray-900 dark:text-white">
-                        {empleado.Nombre} {empleado.Apellido}
+                        {getAreaName(empleado.AreaID)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {empleado.Email}
+                        ID: {empleado.AreaID}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <div>
-                        <div className="text-gray-900 dark:text-white">
-                          {getAreaName(empleado.AreaID)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ID: {empleado.AreaID}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
-                      {empleado.Rol}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      empleado.EstadoEmpleado === 'Activo'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {empleado.EstadoEmpleado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedEmpleado(empleado);
-                          setShowFaceRecognition(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                        title="Registrar rostro"
-                      >
-                        <Camera className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(empleado.EmpleadoID)}
-                        disabled={isDeleting === empleado.EmpleadoID}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
-                        title="Eliminar empleado"
-                      >
-                        {isDeleting === empleado.EmpleadoID ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+                  </div>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                    {empleado.Rol}
+                  </span>
+                </td>
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    empleado.Estado === 'activo'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  }`}>
+                    {empleado.Estado}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => {
+                        setSelectedEmpleado(empleado);
+                      }}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      title="Registrar rostro"
+                    >
+                      <Camera className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(empleado.EmpleadoID)}
+                      disabled={isDeleting === empleado.EmpleadoID}
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50"
+                      title="Eliminar empleado"
+                    >
+                      {isDeleting === empleado.EmpleadoID ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
-      </div>
 
-      {showFaceRecognition && selectedEmpleado && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Registrar Rostro - {selectedEmpleado.Nombre} {selectedEmpleado.Apellido}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowFaceRecognition(false);
-                  stopStreaming();
-                  setCapturedImage(null);
+        {/* Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-gray-50 dark:bg-gray-800 rounded-b-lg border-t border-gray-200 dark:border-gray-700">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Mostrando {empleados.length} de {pagination.total} empleados
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <span>Filas por página:</span>
+              <select
+                value={pagination.page_size}
+                onChange={(e) => {
+                  setEmpleadosData(prev => ({
+                    ...prev,
+                    pagination: {
+                      ...prev.pagination,
+                      page: 1, // Reset to first page when changing page size
+                      page_size: Number(e.target.value)
+                    }
+                  }));
                 }}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                className="border rounded px-2 py-1 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white"
               >
-                <X className="w-5 h-5" />
-              </button>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
             </div>
             
-            <div className="space-y-4">
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-600 dark:text-gray-300 mr-2">
+                Página {pagination.page} de {pagination.total_pages}
+              </span>
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={!pagination.has_previous}
+                className={`p-1.5 rounded-md ${!pagination.has_previous 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.has_previous}
+                className={`p-1.5 rounded-md ${!pagination.has_previous 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.has_next}
+                className={`p-1.5 rounded-md ${!pagination.has_next 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.total_pages)}
+                disabled={!pagination.has_next}
+                className={`p-1.5 rounded-md ${!pagination.has_next 
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed' 
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    
+    {/* Face Recognition Modal */}
+    {selectedEmpleado && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-2xl">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">
+              Registrar rostro de {selectedEmpleado.Nombre} {selectedEmpleado.Apellido}
+            </h3>
+            <button
+              onClick={() => {
+                if (streamRef.current) {
+                  streamRef.current.getTracks().forEach(track => track.stop());
+                }
+                setSelectedEmpleado(null);
+                setCapturedImage(null);
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
               {/* Tabs */}
               <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-8">

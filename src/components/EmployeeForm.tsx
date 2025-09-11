@@ -62,7 +62,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSuccess, onCancel 
         ...formData,
         FechaNacimiento: new Date(formData.FechaNacimiento).toISOString().split('T')[0],
         // Ensure EstadoEmpleado is correctly typed as 'Activo' | 'Inactivo'
-        EstadoEmpleado: formData.EstadoEmpleado as 'Activo' | 'Inactivo'
+        Estado: formData.EstadoEmpleado.toLowerCase() as 'activo' | 'inactivo'
       };
       
       await createEmpleado(empleadoData);
@@ -321,14 +321,14 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSuccess, onCancel 
                 type="button"
                 onClick={onCancel}
                 disabled={isSubmitting}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center min-w-[120px]"
+                className="px-4 py-2.5 text-sm font-medium text-black bg-white border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center min-w-[120px]"
               >
                 {isSubmitting ? (
                   <>
@@ -338,7 +338,7 @@ export const EmployeeForm: React.FC<EmployeeFormProps> = ({ onSuccess, onCancel 
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Guardar Empleado
+                    Guardar
                   </>
                 )}
               </button>

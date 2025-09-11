@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Factory, Shield, BarChart3, Users, Clock, UserPlus } from 'lucide-react';
+import { Factory, Shield, BarChart3, Users, Clock } from 'lucide-react';
 import { ThemeToggle } from './components/ThemeToggle';
 import { FaceRecognition } from './components/FaceRecognition';
 import { ProductionDashboard } from './components/ProductionDashboard';
 import { AccessLogTable } from './components/AccessLogTable';
 import { EmployeesTable } from './components/EmployeesTable';
 import { EmployeeForm } from './components/EmployeeForm';
-import { Acceso } from './types';
+import { Acceso, PaginatedResponse } from './types';
 import { getAccesos } from './services/api';
 
 type MainTabType = 'access' | 'dashboard';
@@ -15,21 +15,53 @@ type AccessTabType = 'logs' | 'employees';
 function App() {
   const [activeTab, setActiveTab] = useState<MainTabType>('access');
   const [activeAccessTab, setActiveAccessTab] = useState<AccessTabType>('logs');
-  const [accesos, setAccesos] = useState<Acceso[]>([]);
+  const [accessData, setAccessData] = useState<PaginatedResponse<Acceso>>({
+    items: [],
+    pagination: {
+      total: 0,
+      page: 1,
+      page_size: 10,
+      total_pages: 1,
+      has_previous: false,
+      has_next: false
+    }
+  });
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [refreshEmployees, setRefreshEmployees] = useState(0);
+  
+  const { items: accesos, pagination } = accessData;
 
-  const fetchAccesos = async () => {
+  const fetchAccesos = async (page: number = 1, pageSize: number = 10) => {
     try {
-      const response = await getAccesos();
-      // Ensure we're working with an array
-      const accessData = Array.isArray(response) ? response : [];
-      setAccesos(accessData);
+      const response = await getAccesos({
+        page,
+        pageSize,
+        // Add any additional filters here if needed
+      });
+      setAccessData(response);
     } catch (error) {
       console.error('Error fetching access logs:', error);
-      // Set an empty array to prevent the map error
-      setAccesos([]);
+      setAccessData({
+        items: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          page_size: pageSize,
+          total_pages: 1,
+          has_previous: false,
+          has_next: false
+        }
+      });
     }
+  };
+  
+  const handlePageChange = (newPage: number) => {
+    fetchAccesos(newPage, pagination.page_size);
+  };
+  
+  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newSize = Number(e.target.value);
+    fetchAccesos(1, newSize);
   };
 
   useEffect(() => {
@@ -40,8 +72,9 @@ function App() {
     }
   }, [activeTab, activeAccessTab, refreshEmployees]);
 
-  const handleAccessLog = (acceso: Acceso) => {
-    setAccesos(prev => [acceso, ...prev]);
+  const handleAccessLog = () => {
+    // Refresh the first page when a new access log is added
+    fetchAccesos(1, pagination.page_size);
   };
 
   const handleEmployeeCreated = () => {
@@ -112,7 +145,7 @@ function App() {
                       onClick={() => setActiveAccessTab('logs')}
                       className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 ${
                         activeAccessTab === 'logs'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                          ? 'border-black txt-black dark:text-white dark:border-white'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                       }`}
                     >
@@ -123,41 +156,44 @@ function App() {
                       onClick={() => setActiveAccessTab('employees')}
                       className={`py-4 px-6 text-center border-b-2 font-medium text-sm flex items-center justify-center gap-2 ${
                         activeAccessTab === 'employees'
-                          ? 'border-blue-500 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                          ? 'border-black txt-black dark:text-white dark:border-white'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                       }`}
                     >
                       <Users className="w-4 h-4" />
                       Gestión de Empleados
                     </button>
-                    {activeAccessTab === 'employees' && (
-                      <div className="ml-auto pr-4 flex items-center">
-                        <button
-                          onClick={() => setShowEmployeeForm(true)}
-                          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          Nuevo Empleado
-                        </button>
-                      </div>
-                    )}
                   </nav>
                 </div>
 
-                <div className="p-6">
-                  {activeAccessTab === 'logs' ? (
-                    <AccessLogTable accesos={accesos} />
-                  ) : showEmployeeForm ? (
-                    <div className="mb-6">
-                      <EmployeeForm 
-                        onSuccess={handleEmployeeCreated}
-                        onCancel={() => setShowEmployeeForm(false)}
+                {activeAccessTab === 'logs' ? (
+                  <div className="p-6">
+                    <div className="space-y-4">
+                      <AccessLogTable 
+                        accesos={accesos} 
+                        pagination={pagination} 
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
                       />
                     </div>
-                  ) : (
-                    <EmployeesTable key={refreshEmployees} />
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="p-6">
+                    {showEmployeeForm ? (
+                      <div className="mb-6">
+                        <EmployeeForm 
+                          onSuccess={handleEmployeeCreated}
+                          onCancel={() => setShowEmployeeForm(false)}
+                        />
+                      </div>
+                    ) : (
+                      <EmployeesTable 
+                        key={refreshEmployees} 
+                        onAddEmployee={() => setShowEmployeeForm(true)} 
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -170,16 +206,6 @@ function App() {
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                Dashboard de Producción y Analytics
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                Visualización de datos de producción, eficiencia, desperdicios y control de calidad 
-                basado en el modelo de datos de la PyME de pastas.
-              </p>
-            </div>
-
             <ProductionDashboard />
           </div>
         )}

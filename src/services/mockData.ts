@@ -17,21 +17,21 @@ export const MOCK_TURNOS: Turno[] = [
     Nombre: 'Mañana',
     HoraInicio: '06:00:00',
     HoraFin: '14:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   },
   {
     TurnoID: 2,
     Nombre: 'Tarde',
     HoraInicio: '14:00:00',
     HoraFin: '22:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   },
   {
     TurnoID: 3,
     Nombre: 'Noche',
     HoraInicio: '22:00:00',
     HoraFin: '06:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   }
 ];
 
@@ -48,7 +48,7 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 2,
-    Nombre: 'Ravioles de Ricota',
+    Nombre: 'Ravioles Espinaca',
     Categoria: 'Pasta_Fresca',
     DiasVidaUtil: 7,
     CondicionesAlmacenamiento: 'Refrigeración',
@@ -58,7 +58,7 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 3,
-    Nombre: 'Fideos Moñito',
+    Nombre: 'Moñito',
     Categoria: 'Pasta_Seca',
     DiasVidaUtil: 730,
     CondicionesAlmacenamiento: 'Lugar seco y fresco',
@@ -68,23 +68,23 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 4,
-    Nombre: 'Salsa Bolognesa',
-    Categoria: 'Salsas',
-    DiasVidaUtil: 365,
-    CondicionesAlmacenamiento: 'Lugar seco',
+    Nombre: 'Tallarin',
+    Categoria: 'Pasta_Seca',
+    DiasVidaUtil: 730,
+    CondicionesAlmacenamiento: 'Lugar seco y fresco',
     TemperaturaAlmacenamiento: 20,
-    NormativaAplicable: 'CAA Art. 900',
-    Observaciones: 'Salsa lista para consumo'
+    NormativaAplicable: 'CAA Art. 760',
+    Observaciones: 'Pasta larga tradicional'
   },
   {
     TipoProductoID: 5,
-    Nombre: 'Cappellettis de Jamón y Queso',
-    Categoria: 'Rellenos',
-    DiasVidaUtil: 5,
-    CondicionesAlmacenamiento: 'Refrigeración',
-    TemperaturaAlmacenamiento: 2,
-    NormativaAplicable: 'CAA Art. 761',
-    Observaciones: 'Pasta rellena premium'
+    Nombre: 'Tirabuzon',
+    Categoria: 'Pasta_Seca',
+    DiasVidaUtil: 730,
+    CondicionesAlmacenamiento: 'Lugar seco y fresco',
+    TemperaturaAlmacenamiento: 20,
+    NormativaAplicable: 'CAA Art. 760',
+    Observaciones: 'Pasta corta'
   }
 ];
 

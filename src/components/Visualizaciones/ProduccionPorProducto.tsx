@@ -1,4 +1,4 @@
-// ProductionLineChart.tsx
+import { useState, useMemo } from 'react';
 import {
   LineChart,
   Line,
@@ -8,7 +8,9 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-} from "recharts";
+} from 'recharts';
+import { Info, TrendingUp } from 'lucide-react';
+import colors from '../../theme/colors';
 
 // === Tipos de entrada ===
 export interface ProductionByTypeQuarter {
@@ -18,14 +20,8 @@ export interface ProductionByTypeQuarter {
   CantidadTotal: number;
 }
 
-// === Colores por producto (ajustá a gusto y/o compartí con otros charts) ===
-const COLORS: Record<string, string> = {
-  "Spaghetti": "#6366f1",
-  "Ravioles de Ricota": "#10b981",
-  "Fideos Moñito": "#f59e0b",
-  "Salsa Bolognesa": "#ef4444",
-  "Cappellettis de Jamón y Queso": "#3b82f6",
-};
+// Usar colores del tema
+const { products } = colors;
 
 // === Util: ordenar "Qn YYYY" cronológicamente ===
 function quarterKey(q: string) {
@@ -60,44 +56,157 @@ function pivotByQuarter(rows: ProductionByTypeQuarter[]) {
 
 // === Componente ===
 export default function ProductionLineChart({ rows }: { rows: ProductionByTypeQuarter[] }) {
-  const { data, productos } = pivotByQuarter(rows);
+  const [showHelp, setShowHelp] = useState(false);
+  const [activeLine, setActiveLine] = useState<string | null>(null);
+  
+  const { data, productos } = useMemo(() => pivotByQuarter(rows), [rows]);
+  const totalProduction = useMemo(() => {
+    return data.reduce((sum, item) => {
+      return sum + productos.reduce((s, p) => s + (item[p] || 0), 0);
+    }, 0);
+  }, [data, productos]);
 
   return (
-    <div className="p-4 bg-white rounded-2xl shadow">
-      <h3 className="text-lg font-semibold mb-2">Producción por Trimestre</h3>
+    <div className="h-full flex flex-col">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-base font-medium text-gray-900 dark:text-white">
+            Producción por Trimestre
+          </h3>
+          <button 
+            onClick={() => setShowHelp(!showHelp)}
+            className="text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 transition-colors"
+            aria-label="Mostrar ayuda"
+          >
+            <Info size={16} />
+          </button>
+        </div>
+        <div className="text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md">
+          Total: {totalProduction.toLocaleString()} u.
+        </div>
+      </div>
+      {showHelp && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Evolución de la producción total por trimestre, desglosada por tipo de producto.
+        </p>
+      )}
 
-      <ResponsiveContainer width="100%" height={360}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="Trimestre"
-            interval={0}
-            tick={{ fontSize: 12 }}
-            angle={-15}
-            textAnchor="end"
-            height={50}
-          />
-          <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip
-            formatter={(value: any, name: string) => [value, name]}
-            labelFormatter={(label) => `Trimestre: ${label}`}
-          />
-          <Legend />
-
-          {productos.map((p) => (
-            <Line
-              key={p}
-              type="monotone"
-              dataKey={p}
-              stroke={COLORS[p] || "#8884d8"}
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
-              connectNulls
+      <div className="flex-1">
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart
+            data={data}
+            margin={{ top: 10, right: 5, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              stroke={colors.gray[200]}
+              strokeOpacity={0.7}
+              vertical={false}
+              className="dark:opacity-50"
             />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+            <XAxis
+              dataKey="Trimestre"
+              axisLine={false}
+              tickLine={false}
+              tick={{
+                fill: colors.gray[600],
+                fontSize: '0.7rem',
+                fontWeight: 500,
+              }}
+              tickMargin={8}
+              height={35}
+              className="dark:[&_text]:fill-gray-300"
+            />
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{
+                fill: colors.gray[600],
+                fontSize: '0.7rem',
+                fontWeight: 500,
+              }}
+              tickMargin={5}
+              width={35}
+              tickFormatter={(value) => {
+                if (value >= 1000) return `${value / 1000}k`;
+                return value;
+              }}
+              className="dark:[&_text]:fill-gray-300"
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                border: '1px solid',
+                borderColor: colors.gray[200],
+                borderRadius: '0.5rem',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                padding: '0.5rem',
+                fontSize: '0.75rem',
+                color: colors.gray[800],
+              }}
+              formatter={(value: number) => [
+                <span key="value" className="font-semibold">{value.toLocaleString()}</span>, 
+                <span key="label" className="text-gray-500">unidades</span>
+              ]}
+              labelFormatter={(label) => (
+                <div className="text-xs font-medium text-gray-700">
+                  {label}
+                </div>
+              )}
+              itemStyle={{
+                padding: '0.25rem 0',
+              }}
+            />
+            <Legend 
+              wrapperStyle={{
+                paddingTop: '0.5rem',
+                fontSize: '0.7rem',
+              }}
+              iconType="circle"
+              iconSize={8}
+              formatter={(value) => (
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {value}
+                </span>
+              )}
+            />
+
+            {productos.map((p) => (
+              <Line
+                key={p}
+                type="monotone"
+                dataKey={p}
+                stroke={(products as Record<string, string>)[p] || colors.gray[400]}
+                strokeWidth={2}
+                dot={{
+                  r: 4,
+                  stroke: (products as Record<string, string>)[p] || colors.gray[400],
+                  strokeWidth: 2,
+                  fill: '#fff',
+                  opacity: activeLine === null || activeLine === p ? 1 : 0.3,
+                }}
+                activeDot={{
+                  r: 6,
+                  stroke: (products as Record<string, string>)[p] || colors.gray[400],
+                  strokeWidth: 2,
+                  fill: '#fff',
+                  style: {
+                    filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.2))',
+                  }
+                }}
+                strokeOpacity={activeLine === null || activeLine === p ? 1 : 0.3}
+                style={{
+                  transition: 'opacity 0.2s ease-in-out',
+                }}
+                onMouseEnter={() => setActiveLine(p)}
+                onMouseLeave={() => setActiveLine(null)}
+                connectNulls
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
