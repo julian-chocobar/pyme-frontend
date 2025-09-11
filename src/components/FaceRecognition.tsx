@@ -47,9 +47,12 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
     const fetchAreas = async () => {
       try {
         const areasData = await getAreas();
-        setAreas(areasData);
-        if (areasData.length > 0 && !selectedArea) {
-          setSelectedArea(areasData[0].AreaID);
+        // Ordenar áreas por ID
+        const sortedAreas = [...areasData].sort((a, b) => a.AreaID.localeCompare(b.AreaID));
+        setAreas(sortedAreas);
+        if (sortedAreas.length > 0 && !selectedArea) {
+          // Seleccionar automáticamente la primera área (la de ID más bajo)
+          setSelectedArea(sortedAreas[0].AreaID);
         }
       } catch (error) {
         console.error('Error fetching areas:', error);
@@ -444,7 +447,7 @@ export const FaceRecognition: React.FC<FaceRecognitionProps> = ({ onAccessLog })
               disabled={isStreaming || isProcessing}
             >
               <option value="">Seleccione un área</option>
-              {areas.map((area) => (
+              {[...areas].sort((a, b) => a.AreaID.localeCompare(b.AreaID)).map((area) => (
                 <option key={area.AreaID} value={area.AreaID}>
                   {area.Nombre} ({area.AreaID})
                 </option>
