@@ -1,4 +1,13 @@
 import axios from 'axios';
+import { 
+  AccessRequest, 
+  AccessResponse, 
+  Empleado, 
+  AreaTrabajo, 
+  Acceso, 
+  PaginatedResponse, 
+  PaginationMetadata 
+} from '../types';
 
 // Set the base URL based on the environment
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -38,29 +47,8 @@ api.interceptors.response.use(
   }
 );
 
-export interface AccessRequest {
-  file?: File;
-  tipo_acceso: 'Ingreso' | 'Egreso';
-  area_id: string;  // Changed from number to string to match API format (e.g., 'AREA001')
-  pin?: string;
-  dispositivo?: string;
-  observaciones?: string;
-}
-
-export interface AccessResponse {
-  message: string;
-  empleado?: {
-    id: number;
-    nombre: string;
-    apellido: string;
-    rol: string;
-  };
-  area_id: string;  // Changed from number to string to match API format (e.g., 'AREA001')
-  tipo_acceso: 'Ingreso' | 'Egreso';
-  metodo_acceso?: 'Facial' | 'PIN';
-  confianza?: number;
-  acceso_permitido: boolean;
-}
+// Re-export types for backward compatibility
+export type { AccessRequest, AccessResponse, Empleado, AreaTrabajo, Acceso, PaginatedResponse, PaginationMetadata };
 
 export const createFacialAccess = async (data: Omit<AccessRequest, 'pin'>): Promise<AccessResponse> => {
   const formData = new FormData();
@@ -130,29 +118,16 @@ export const createPinAccess = async (data: Omit<AccessRequest, 'file'>): Promis
   }
 };
 
-// Employee management
-export interface Empleado {
-  EmpleadoID: number;
-  Nombre: string;
-  Apellido: string;
-  DNI: string;
-  FechaNacimiento: string;
-  Email: string;
-  Rol: string;
-  EstadoEmpleado: 'Activo' | 'Inactivo';
-  AreaID: string;
-  FechaRegistro: string;
-}
+// All types are now imported from '../types'
 
-export interface AreaTrabajo {
-  AreaID: string;
-  Nombre: string;
-  Descripcion: string;
-  Estado: 'Activo' | 'Inactivo';
-}
-
-export const getEmpleados = async (): Promise<Empleado[]> => {
-  const response = await api.get('/empleados');
+export const getEmpleados = async (page: number = 1, pageSize: number = 10, search: string = ''): Promise<PaginatedResponse<Empleado>> => {
+  const response = await api.get<PaginatedResponse<Empleado>>('/empleados', {
+    params: {
+      page,
+      page_size: pageSize,
+      nombre: search || undefined,
+    },
+  });
   return response.data;
 };
 
@@ -196,16 +171,36 @@ export const registrarRostro = async (empleadoId: number, file: File | FormData)
   return response.data;
 };
 
-export const getAccesos = async (params?: {
+// Acceso type is now imported from '../types'
+
+export const getAccesos = async ({
+  page = 1,
+  pageSize = 10,
+  empleado_id,
+  area_id,
+  tipo_acceso,
+  fecha_inicio,
+  fecha_fin,
+}: {
+  page?: number;
+  pageSize?: number;
   empleado_id?: number;
-  area_id?: number;
+  area_id?: string;
   tipo_acceso?: 'Ingreso' | 'Egreso';
   fecha_inicio?: string;
   fecha_fin?: string;
-  limit?: number;
-  offset?: number;
-}) => {
-  const response = await api.get('/accesos', { params });
+} = {}): Promise<PaginatedResponse<Acceso>> => {
+  const response = await api.get<PaginatedResponse<Acceso>>('/accesos', {
+    params: {
+      page,
+      page_size: pageSize,
+      empleado_id,
+      area_id,
+      tipo_acceso,
+      fecha_inicio,
+      fecha_fin,
+    },
+  });
   return response.data;
 };
 

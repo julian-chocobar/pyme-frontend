@@ -17,21 +17,21 @@ export const MOCK_TURNOS: Turno[] = [
     Nombre: 'Mañana',
     HoraInicio: '06:00:00',
     HoraFin: '14:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   },
   {
     TurnoID: 2,
     Nombre: 'Tarde',
     HoraInicio: '14:00:00',
     HoraFin: '22:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   },
   {
     TurnoID: 3,
     Nombre: 'Noche',
     HoraInicio: '22:00:00',
     HoraFin: '06:00:00',
-    EstadoTurno: 'Activo'
+    EstadoTurno: 'activo'
   }
 ];
 
@@ -48,7 +48,7 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 2,
-    Nombre: 'Ravioles de Ricota',
+    Nombre: 'Ravioles Espinaca',
     Categoria: 'Pasta_Fresca',
     DiasVidaUtil: 7,
     CondicionesAlmacenamiento: 'Refrigeración',
@@ -58,7 +58,7 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 3,
-    Nombre: 'Fideos Moñito',
+    Nombre: 'Moñito',
     Categoria: 'Pasta_Seca',
     DiasVidaUtil: 730,
     CondicionesAlmacenamiento: 'Lugar seco y fresco',
@@ -68,26 +68,25 @@ export const MOCK_TIPOS_PRODUCTO: TipoProducto[] = [
   },
   {
     TipoProductoID: 4,
-    Nombre: 'Salsa Bolognesa',
-    Categoria: 'Salsas',
-    DiasVidaUtil: 365,
-    CondicionesAlmacenamiento: 'Lugar seco',
+    Nombre: 'Tallarin',
+    Categoria: 'Pasta_Seca',
+    DiasVidaUtil: 730,
+    CondicionesAlmacenamiento: 'Lugar seco y fresco',
     TemperaturaAlmacenamiento: 20,
-    NormativaAplicable: 'CAA Art. 900',
-    Observaciones: 'Salsa lista para consumo'
+    NormativaAplicable: 'CAA Art. 760',
+    Observaciones: 'Pasta larga tradicional'
   },
   {
     TipoProductoID: 5,
-    Nombre: 'Cappellettis de Jamón y Queso',
-    Categoria: 'Rellenos',
-    DiasVidaUtil: 5,
-    CondicionesAlmacenamiento: 'Refrigeración',
-    TemperaturaAlmacenamiento: 2,
-    NormativaAplicable: 'CAA Art. 761',
-    Observaciones: 'Pasta rellena premium'
+    Nombre: 'Tirabuzon',
+    Categoria: 'Pasta_Seca',
+    DiasVidaUtil: 730,
+    CondicionesAlmacenamiento: 'Lugar seco y fresco',
+    TemperaturaAlmacenamiento: 20,
+    NormativaAplicable: 'CAA Art. 760',
+    Observaciones: 'Pasta corta'
   }
 ];
-
 
 // Generate mock production data
 export const generateMockLotes = (): Lote[] => {
@@ -142,7 +141,7 @@ export const generateMockIrregularidades = (): Irregularidad[] => {
   
   for (let i = 0; i < irregularityCount; i++) {
     const lote = lotes[Math.floor(Math.random() * lotes.length)];
-    const area = { AreaID: 1 + Math.floor(Math.random() * 3) }; // Dummy area ID
+    const area = { AreaID: 1 + Math.floor(Math.random() * 6) }; // Dummy area ID
     
     const errorDate = new Date(lote.FechaProduccion);
     errorDate.setHours(errorDate.getHours() + Math.floor(Math.random() * 24));
@@ -176,31 +175,43 @@ export const generateMockIrregularidades = (): Irregularidad[] => {
 export const generateProductionByTypeQuarter = (): ProductionByTypeQuarter[] => {
   const lotes = generateMockLotes();
   const data: ProductionByTypeQuarter[] = [];
-  
-  const quarters = ['Q1 2024', 'Q2 2024', 'Q3 2024', 'Q4 2024'];
-  
-  MOCK_TIPOS_PRODUCTO.forEach(tipo => {
-    quarters.forEach(quarter => {
-      const quarterLotes = lotes.filter(lote => {
-        const date = new Date(lote.FechaProduccion);
-        const q = Math.floor(date.getMonth() / 3) + 1;
-        const year = date.getFullYear();
-        return lote.TipoProductoID === tipo.TipoProductoID && 
-               `Q${q} ${year}` === quarter &&
-               lote.EstadoLote !== 'Descartado';
+
+  // Derivar trimestres (solo no descartados)
+  const trimestresSet = new Set<string>();
+  for (const l of lotes) {
+    if (l.EstadoLote === "Descartado") continue;
+    const d = new Date(l.FechaProduccion);
+    const q = Math.floor(d.getMonth() / 3) + 1;
+    const y = d.getFullYear();
+    trimestresSet.add(`Q${q} ${y}`);
+  }
+  const trimestres = Array.from(trimestresSet).sort();
+
+  // Agregar (producto, trimestre)
+  for (const tipo of MOCK_TIPOS_PRODUCTO) {
+    for (const t of trimestres) {
+      const [qStr, yStr] = t.split(" ");
+      const qTarget = Number(qStr.slice(1));
+      const yTarget = Number(yStr);
+
+      const quarterLotes = lotes.filter(l => {
+        if (l.EstadoLote === "Descartado") return false;
+        if (l.TipoProductoID !== tipo.TipoProductoID) return false;
+        const d = new Date(l.FechaProduccion);
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        const y = d.getFullYear();
+        return q === qTarget && y === yTarget;
       });
-      
-      if (quarterLotes.length > 0) {
-        data.push({
-          TipoProducto: tipo.Nombre,
-          Trimestre: quarter,
-          CantidadLotes: quarterLotes.length,
-          CantidadTotal: quarterLotes.reduce((sum, lote) => sum + lote.Cantidad, 0)
-        });
-      }
-    });
-  });
-  
+
+      data.push({
+        TipoProducto: tipo.Nombre,
+        Trimestre: t,
+        CantidadLotes: quarterLotes.length,
+        CantidadTotal: quarterLotes.reduce((s, l) => s + l.Cantidad, 0),
+      });
+    }
+  }
+
   return data;
 };
 
@@ -239,6 +250,32 @@ export const generateIrregularityByAreaProduct = (): IrregularityByAreaProduct[]
   
   return data;
 };
+
+export function sumIrregularidadesPorArea(rows: IrregularityByAreaProduct[]) {
+  const map = new Map<string, number>();
+
+  rows.forEach(r => {
+    map.set(r.Area, (map.get(r.Area) ?? 0) + r.CantidadIrregularidades);
+  });
+
+  return Array.from(map, ([Area, CantidadIrregularidades]) => ({
+    Area,
+    CantidadIrregularidades,
+  }));
+}
+
+export function sumIrregularidadesPorProducto(rows: IrregularityByAreaProduct[]) {
+  const map = new Map<string, number>();
+
+  rows.forEach(r => {
+    map.set(r.TipoProducto, (map.get(r.TipoProducto) ?? 0) + r.CantidadIrregularidades);
+  });
+
+  return Array.from(map, ([TipoProducto, CantidadIrregularidades]) => ({
+    TipoProducto,
+    CantidadIrregularidades,
+  }));
+}
 
 // 5. Porcentaje de Desperdicio por Producto
 export const generateWastePercentageByProduct = (): WastePercentageByProduct[] => {
